@@ -1,3 +1,39 @@
+# The Prophets' Journey
+
+A gamified Islamic learning experience for kids — travel the path of all **25 prophets** (in order of ascendance) by the light of your lantern. Each prophet is a "land" you light up by journeying through their story, making a choice, applying the lesson to today, and earning Noor (✦) and a virtue badge.
+
+Built from a Claude Design prototype (see `project/` and `chats/`). Implemented as a **Next.js (App Router) + React** app.
+
+## Features
+
+- **Three screens** — profile select (Hamza / Huzaifa), a vertical zig-zag journey map (lock / current / done states, Noor + badge counters), and the cinematic stage.
+- **Moving 3D-parallax scenes** — the camera travels and zooms as you progress, with per-terrain animated silhouettes (Nuh's ark, Yunus's whale, the Kaaba, Ibrahim's fire, a starfield, rain, drifting clouds, birds…), a fixed lantern as "you," and a guiding Hudhud bird.
+- **Story loop per prophet** — Arrive → multi-chapter Story → moral Decision → result → modern "apply it today" scenario → result → Reward.
+- **Synced storyteller narration** — warm, name-personalised voice (Web Speech API) that highlights each word as it's spoken, with pronunciation tuning for Islamic terms (Allah, Bismillah, MashaAllah…).
+- **Bilingual** — Roman-Urdu by default, English via the 🌐 toggle. Choice + progress persist in `localStorage` per profile.
+
+## Run it
+
+```bash
+npm install
+npm run dev      # http://localhost:3000
+```
+
+```bash
+npm run build && npm run start   # production
+```
+
+> Narration uses the **device's installed voices**. For native Urdu + properly pronounced "Allah," install an Urdu (ur-PK) voice on the device; otherwise it falls back gracefully to an English voice reading the Roman-Urdu text.
+
+## Project layout
+
+- `app/` — the Next.js application
+  - `app/components/ProphetsJourney.jsx` — the full experience (rendered client-only)
+  - `app/data/` — story content: `prophets-data.js` (English) + `prophets-ur.js` (Roman-Urdu)
+- `project/`, `chats/` — the original Claude Design handoff bundle (kept for reference)
+
+---
+
 # CODING AGENTS: READ THIS FIRST
 
 This is a **handoff bundle** from Claude Design (claude.ai/design).

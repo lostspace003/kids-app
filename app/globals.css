@@ -1,0 +1,30 @@
+html, body { margin: 0; padding: 0; background: #0c0820; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+@keyframes ipjFloat { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-10px) } }
+@keyframes ipjBob { 0%,100% { transform: translateY(0) rotate(-3deg) } 50% { transform: translateY(-8px) rotate(3deg) } }
+@keyframes ipjPulse { 0%,100% { opacity: .55 } 50% { opacity: .95 } }
+@keyframes ipjTwinkle { 0%,100% { opacity: .2 } 50% { opacity: 1 } }
+@keyframes ipjRise { 0% { opacity: 0; transform: translateY(18px) } 100% { opacity: 1; transform: translateY(0) } }
+@keyframes ipjGlow { 0%,100% { box-shadow: 0 0 26px 6px rgba(245,196,81,.55) } 50% { box-shadow: 0 0 50px 14px rgba(245,196,81,.9) } }
+@keyframes ipjFlicker { 0%,100% { opacity: .85; transform: scale(1) } 50% { opacity: 1; transform: scale(1.08) } }
+@keyframes ipjDrift { 0% { transform: translateX(-30px) } 100% { transform: translateX(30px) } }
+@keyframes ipjSway { 0%,100% { transform: rotate(-2.5deg) } 50% { transform: rotate(2.5deg) } }
+@keyframes ipjWave { 0% { transform: translateX(0) } 100% { transform: translateX(-44px) } }
+@keyframes ipjSwim { 0% { transform: translateX(-26px) } 100% { transform: translateX(26px) } }
+@keyframes ipjRain { 0% { transform: translateY(-10px); opacity: 0 } 10% { opacity: .6 } 100% { transform: translateY(120px); opacity: 0 } }
+@keyframes ipjMote { 0% { transform: translate(0,0); opacity: 0 } 15% { opacity: .9 } 85% { opacity: .7 } 100% { transform: translate(20px,-60px); opacity: 0 } }
+@keyframes ipjFly { 0% { transform: translate(-12vw,0) } 100% { transform: translate(118vw,-24px) } }
+@keyframes ipjFlame { 0%,100% { transform: scaleY(1) skewX(-3deg); opacity: .85 } 50% { transform: scaleY(1.25) skewX(4deg); opacity: 1 } }
+
+.ipj-scroll::-webkit-scrollbar { width: 0; height: 0 }
+
+/* Hover behaviours ported from the prototype's `style-hover` attributes */
+.ipj-traveler { transition: transform .15s, background .2s; }
+.ipj-traveler:hover { background: rgba(245,196,81,.12) !important; transform: translateY(-4px); }
+
+.ipj-choice { transition: background .15s, transform .12s; }
+.ipj-choice:hover { background: rgba(245,196,81,.14) !important; transform: translateX(3px); }
+
+.ipj-primary { transition: transform .12s; }
+.ipj-primary:hover { transform: translateY(-2px); }
