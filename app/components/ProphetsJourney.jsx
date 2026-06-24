@@ -17,6 +17,11 @@ import {
 
 const E = React.createElement;
 
+// Prefix static asset URLs with the deploy base path (e.g. "/kids-app" on
+// GitHub Pages) so audio + photos resolve correctly under a sub-path.
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
+const asset = (p) => (p && p.charAt(0) === "/" ? BASE + p : p);
+
 // Noor → level ladder. Each level lifts the lantern a little higher.
 const LEVELS = [
   { min: 0, name: "New Traveller", nameUr: "Naya Musafir", icon: "🕯️" },
@@ -100,7 +105,7 @@ export default class ProphetsJourney extends React.Component {
     // Load the pre-generated audio manifest; narration falls back to the
     // browser voice for any clip not present.
     if (typeof fetch !== "undefined") {
-      fetch("/audio/manifest.json").then((r) => (r.ok ? r.json() : null)).then((m) => { this.manifest = m || {}; }).catch(() => { this.manifest = {}; });
+      fetch(asset("/audio/manifest.json")).then((r) => (r.ok ? r.json() : null)).then((m) => { this.manifest = m || {}; }).catch(() => { this.manifest = {}; });
     }
   }
   componentWillUnmount() { this.stopAudio(); if (this.synth) this.synth.cancel(); }
@@ -299,7 +304,7 @@ export default class ProphetsJourney extends React.Component {
     const meta = this.manifest && this.manifest[key];
     if (!meta) return false;
     this.stopAudio();
-    const audio = new Audio("/audio/" + key + ".mp3");
+    const audio = new Audio(asset("/audio/" + key + ".mp3"));
     this.audioEl = audio;
     // For Urdu the on-screen Roman words don't match the Urdu-script audio
     // tokens, so sweep the highlight evenly across the clip instead.
@@ -338,7 +343,7 @@ export default class ProphetsJourney extends React.Component {
   playAyah() {
     const a = this.ayahList()[this.state.ayahIdx]; if (!a) return;
     this.stopAudio();
-    const rec = new Audio(a.audio); this.audioEl = rec;
+    const rec = new Audio(asset(a.audio)); this.audioEl = rec;
     rec.onended = () => { if (this.audioEl === rec) { this.audioEl = null; this.narrateAyahMeaning(); } };
     rec.play().catch(() => { if (this.audioEl === rec) this.audioEl = null; this.narrateAyahMeaning(); });
   }
@@ -349,7 +354,7 @@ export default class ProphetsJourney extends React.Component {
     this._lastSpoken = r.spoken; this._lastMap = r.map;
     if (!this.playStatic(r.key)) this.speakWeb(r.spoken, r.map);
   }
-  repeatRecitation() { const a = this.ayahList()[this.state.ayahIdx]; if (!a) return; this.stopAudio(); const rec = new Audio(a.audio); this.audioEl = rec; rec.play().catch(() => {}); }
+  repeatRecitation() { const a = this.ayahList()[this.state.ayahIdx]; if (!a) return; this.stopAudio(); const rec = new Audio(asset(a.audio)); this.audioEl = rec; rec.play().catch(() => {}); }
   playArabicVoice() { const a = this.ayahList()[this.state.ayahIdx]; if (!a) return; const r = lineNarration({ lang: "ar", text: a.ar }); this.playStatic(r.key); }
 
   narrateCurrent() {
@@ -616,7 +621,7 @@ export default class ProphetsJourney extends React.Component {
     const dim = `min(${size}px, ${Math.round(size / 4.6)}vw)`;
     return E("div", { style: { width: dim, height: dim, borderRadius: "50%", padding: "3px", background: grad, boxShadow: "0 0 22px rgba(245,196,81,.45), 0 6px 18px rgba(0,0,0,.5)" } },
       E("div", { style: { width: "100%", height: "100%", borderRadius: "50%", overflow: "hidden", border: "2px solid rgba(255,255,255,.7)" } },
-        E("img", { src: pic, alt: "", style: { width: "100%", height: "100%", objectFit: "cover", display: "block" } })
+        E("img", { src: asset(pic), alt: "", style: { width: "100%", height: "100%", objectFit: "cover", display: "block" } })
       )
     );
   }
@@ -679,7 +684,7 @@ export default class ProphetsJourney extends React.Component {
                 <button key={i} className="ipj-traveler" onClick={p.onPick} style={s("cursor:pointer;background:rgba(255,255,255,.05);border:1px solid rgba(245,196,81,.25);border-radius:26px;padding:clamp(18px,5vw,26px) clamp(20px,7vw,30px) clamp(16px,4vw,22px);width:clamp(140px,42vw,170px);display:flex;flex-direction:column;align-items:center;gap:14px;color:#f4eede;backdrop-filter:blur(4px);")}>
                   <div style={s(`width:96px;height:96px;border-radius:50%;padding:3px;background:${p.grad};animation:ipjGlow 3.5s ease-in-out infinite;`)}>
                     <div style={s("width:100%;height:100%;border-radius:50%;overflow:hidden;border:2px solid rgba(255,255,255,.7);")}>
-                      <img src={p.pic} alt={p.name} style={s("width:100%;height:100%;object-fit:cover;display:block;")} />
+                      <img src={asset(p.pic)} alt={p.name} style={s("width:100%;height:100%;object-fit:cover;display:block;")} />
                     </div>
                   </div>
                   <div style={s("font-family:'Fredoka';font-size:22px;font-weight:600;")}>{p.name}</div>
@@ -699,7 +704,7 @@ export default class ProphetsJourney extends React.Component {
             <div style={s("flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:14px 16px;background:linear-gradient(180deg,rgba(12,8,32,.95),rgba(12,8,32,0));z-index:5;")}>
               <button onClick={V.goProfile} style={s("cursor:pointer;display:flex;align-items:center;gap:10px;border:1px solid rgba(245,196,81,.25);background:rgba(255,255,255,.05);border-radius:40px;padding:6px 14px 6px 6px;color:#f4eede;")}>
                 <span style={s(`width:40px;height:40px;border-radius:50%;overflow:hidden;border:2px solid rgba(245,196,81,.6);background:${V.profileGrad};display:block;`)}>
-                  <img src={V.profilePic} alt={V.profileName} style={s("width:100%;height:100%;object-fit:cover;display:block;")} />
+                  <img src={asset(V.profilePic)} alt={V.profileName} style={s("width:100%;height:100%;object-fit:cover;display:block;")} />
                 </span>
                 <span style={s("font-family:'Fredoka';font-weight:600;font-size:16px;")}>{V.profileName}</span>
               </button>
