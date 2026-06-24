@@ -23,7 +23,7 @@ export function Screen({ children, narrow = false }) {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        padding: "28px 18px",
+        padding: "56px 18px 28px",
         fontFamily: "Nunito, sans-serif",
       }}
     >

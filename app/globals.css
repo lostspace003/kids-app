@@ -50,12 +50,21 @@ html, body { margin: 0; padding: 0; background: #0c0820; }
 @keyframes ipjSpin { to { transform: rotate(360deg) } }
 .ipj-spin { animation: ipjSpin 1s linear infinite; }
 
+/* Safar Anbiya splash (first page) animations. */
+@keyframes saTwinkle { 0%,100% { opacity: .2 } 50% { opacity: 1 } }
+@keyframes saFloat { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-8px) } }
+@keyframes saGlow { 0%,100% { filter: drop-shadow(0 0 14px rgba(245,196,81,.45)) } 50% { filter: drop-shadow(0 0 30px rgba(245,196,81,.8)) } }
+@keyframes saRise { 0% { opacity: 0; transform: translateY(20px) } 100% { opacity: 1; transform: translateY(0) } }
+@keyframes saPulse { 0% { box-shadow: 0 0 0 0 rgba(245,196,81,.45) } 70% { box-shadow: 0 0 0 22px rgba(245,196,81,0) } 100% { box-shadow: 0 0 0 0 rgba(245,196,81,0) } }
+.sa-begin { transition: transform .14s; }
+.sa-begin:hover { transform: translateY(-3px); }
+
 .ipj-scroll::-webkit-scrollbar { width: 0; height: 0 }
 .ipj-scroll { -webkit-overflow-scrolling: touch; scrollbar-width: none; }
 
 /* Small-phone polish: keep everything legible and uncramped on ~360px screens. */
 @media (max-width: 380px) {
-  .ipj-stage-top { gap: 6px !important; padding: 10px 9px !important; }
+  .ipj-stage-top { gap: 6px !important; padding: 30px 9px 8px !important; }
   .ipj-round { width: 38px !important; height: 38px !important; font-size: 16px !important; }
   .ipj-choice { padding: 12px 13px !important; font-size: 15px !important; }
 }

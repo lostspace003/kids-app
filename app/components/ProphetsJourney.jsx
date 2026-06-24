@@ -809,6 +809,7 @@ export default class ProphetsJourney extends React.Component {
               )}
             </div>
             <div style={s("text-align:center;padding:2px 16px 14px;")}>
+              <img src="/brand/svg/emblem-glow.svg" alt="" width="38" height="38" style={s("display:block;margin:0 auto 2px;")} />
               <div style={s("font-family:'Fredoka';font-weight:600;font-size:clamp(22px,5vw,30px);")}>{V.t.yourJourney}</div>
               <div style={s("opacity:.6;font-size:13px;")}>{V.journeySub}</div>
             </div>
@@ -862,6 +863,7 @@ export default class ProphetsJourney extends React.Component {
         {/* ============ STAGE ============ */}
         {V.isStage && (
           <div style={s("position:absolute;inset:0;overflow:hidden;")}>
+            <img src="/brand/svg/emblem-glow.svg" alt="" width="28" height="28" style={s("position:absolute;top:5px;left:50%;transform:translateX(-50%);z-index:11;pointer-events:none;")} />
             <div style={s("position:absolute;left:-25%;top:0;width:150%;height:100%;" + V.cameraStyle)}>
               <div className={this.props.reduceMotion ? "" : "ipj-scene-wrap"} style={s("position:absolute;inset:0;")}>
                 <div key={V.sceneKey} className={this.props.reduceMotion ? "" : "ipj-scene-layer"} style={s("position:absolute;inset:0;")}>{V.scene}</div>
@@ -871,7 +873,7 @@ export default class ProphetsJourney extends React.Component {
             {V.floatingAvatar}
             {V.view.isReward && this.confetti(V.celebrate)}
 
-            <div className="ipj-stage-top" style={s("position:absolute;top:0;left:0;right:0;display:flex;align-items:center;gap:10px;padding:14px 16px;z-index:10;background:linear-gradient(180deg,rgba(10,7,26,.72),transparent);")}>
+            <div className="ipj-stage-top" style={s("position:absolute;top:0;left:0;right:0;display:flex;align-items:center;gap:10px;padding:34px 16px 12px;z-index:10;background:linear-gradient(180deg,rgba(10,7,26,.72),transparent);")}>
               <button onClick={V.backToMap} style={s("cursor:pointer;flex:0 0 auto;border:1px solid rgba(255,255,255,.2);background:rgba(10,7,26,.4);color:#f4eede;border-radius:40px;padding:8px 14px;font-weight:700;backdrop-filter:blur(6px);")}>‹ Map</button>
               <div style={s("flex:1;text-align:center;min-width:0;")}>
                 <div style={s("font-family:'Fredoka';font-weight:600;font-size:clamp(16px,4.4vw,26px);line-height:1.1;text-shadow:0 2px 14px rgba(0,0,0,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;")}>{V.cur.name} <span style={s("opacity:.8;font-size:.8em;")}>{V.cur.honor}</span></div>

@@ -1,9 +1,17 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "The Prophets' Journey",
+  title: "Safar Anbiya · Journey of the Prophets",
   description:
     "A gamified Islamic learning journey for kids — travel the path of all 25 prophets by the light of your lantern.",
+  icons: {
+    icon: [
+      { url: "/brand/png/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/brand/png/favicon-16.png", sizes: "16x16", type: "image/png" },
+      { url: "/brand/svg/emblem-color.svg", type: "image/svg+xml" },
+    ],
+    apple: "/brand/png/apple-touch-icon-180.png",
+  },
 };
 
 export const viewport = {

@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
-import SalamSplash from "./SalamSplash";
+import SafarSplash from "./SafarSplash";
+import BrandMark from "./BrandMark";
 import AuthFlow from "./auth/AuthFlow";
 import ProfileSetup from "./profile/ProfileSetup";
 import WelcomeProfile from "./profile/WelcomeProfile";
@@ -81,21 +82,25 @@ export default function AuthGate() {
   if (stage === "splash") {
     return (
       <>
-        <SalamSplash onBegin={() => setBegan(true)} />
+        <SafarSplash onBegin={() => setBegan(true)} />
         {began && me === undefined && <LaunchLoading />}
       </>
     );
   }
-  if (stage === "auth") return <AuthFlow onAuthed={onAuthed} />;
+  if (stage === "auth")
+    return (<><BrandMark /><AuthFlow onAuthed={onAuthed} /></>);
   if (stage === "profile")
     return (
-      <ProfileSetup
-        email={me?.user?.email || ""}
-        onDone={(p) => { setProfile(p); setStage("welcome"); }}
-      />
+      <>
+        <BrandMark />
+        <ProfileSetup
+          email={me?.user?.email || ""}
+          onDone={(p) => { setProfile(p); setStage("welcome"); }}
+        />
+      </>
     );
   if (stage === "welcome")
-    return <WelcomeProfile profile={profile} onContinue={() => setStage("journey")} />;
+    return (<><BrandMark /><WelcomeProfile profile={profile} onContinue={() => setStage("journey")} /></>);
 
   // ---- journey + app chrome ----
   return (
