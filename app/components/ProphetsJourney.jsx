@@ -3,11 +3,14 @@
 import React from "react";
 import { PROPHET_DATA } from "../data/prophets-data";
 import { PROPHET_UR } from "../data/prophets-ur";
+import { PROPHET_UR_SCRIPT } from "../data/prophets-ur-script";
+import { PROPHET_AYAH } from "../data/prophets-ayah";
 import {
   tokenize as _tokenize,
   speakForm as _speakForm,
   storytellerWrap as _wrap,
   narrationForBeat,
+  lineNarration,
   arriveText,
   rewardText,
 } from "../lib/narration";
@@ -54,9 +57,14 @@ const PROFILES = {
 // Where the floating traveller medallion sits on the stage — it hops to a new
 // spot (and size) on each beat so the child "travels along" through the scene.
 const AVATAR_SPOTS = [
-  { t: "14%", l: "9%",  size: 74 }, { t: "19%", l: "79%", size: 64 },
-  { t: "30%", l: "13%", size: 86 }, { t: "15%", l: "72%", size: 78 },
-  { t: "27%", l: "82%", size: 60 }, { t: "12%", l: "22%", size: 70 },
+  { t: "13%", l: "7%",  size: 124 }, { t: "17%", l: "70%", size: 110 },
+  { t: "29%", l: "9%",  size: 146 }, { t: "13%", l: "66%", size: 132 },
+  { t: "26%", l: "73%", size: 104 }, { t: "11%", l: "20%", size: 120 },
+];
+// The narration card travels too (offset in vw / vh from its bottom-centre
+// anchor), so the "content" drifts around the screen beat by beat.
+const CARD_OFFSETS = [
+  { x: 0, y: 0 }, { x: 0, y: -11 }, { x: -4, y: -5 }, { x: 4, y: -14 }, { x: -3, y: -8 }, { x: 3, y: -3 },
 ];
 const HL = "color:#ffe6a3;text-shadow:0 0 14px rgba(245,196,81,.85);";
 const NORMAL = "color:rgba(244,238,222,.84);transition:color .12s,text-shadow .12s;";
@@ -79,7 +87,8 @@ export default class ProphetsJourney extends React.Component {
       screen: "profile", profile: null, sub: "arrive", curId: null, panel: 0,
       pickedDec: null, pickedMod: null, goodCount: 0, earned: 0,
       muted: false, activeWord: -1, lang: lang0,
-      quiz: null, quizPick: null,        // mini-quiz recap state
+      quiz: null, quizPick: null, quizIdx: 0,   // mini-quiz recap state
+      ayahIdx: 0,                                // which Qur'anic verse is showing
       starsEarned: 0, leveledTo: null,   // reward-screen celebration
       celebrate: 0,                       // bump to fire confetti
       progress: { completed: [], noor: 0, stars: {}, streak: 0, lastDay: null },
@@ -97,7 +106,7 @@ export default class ProphetsJourney extends React.Component {
   componentWillUnmount() { this.stopAudio(); if (this.synth) this.synth.cancel(); }
   componentDidUpdate() {
     const st = this.state;
-    const key = st.screen + "|" + st.curId + "|" + st.sub + "|" + st.panel;
+    const key = st.screen + "|" + st.curId + "|" + st.sub + "|" + st.panel + "|" + st.ayahIdx + "|" + st.quizIdx;
     if (key === this._spokeKey) return;
     this._spokeKey = key;
     if (st.screen !== "stage") { this.stopAudio(); return; }
@@ -138,33 +147,51 @@ export default class ProphetsJourney extends React.Component {
     this.setState({ profile: p, progress: prog, screen: "map" }, () => this.saveProgress());
   }
   goProfile() { if (this.synth) this.synth.cancel(); this.setState({ screen: "profile", profile: null }); }
-  openProphet(id) { const i = this.data().findIndex((d) => d.id === id); if (!this.isUnlocked(i)) return; this.primeSpeech(); this.sfx("open"); this.setState({ screen: "stage", curId: id, sub: "arrive", panel: 0, pickedDec: null, pickedMod: null, goodCount: 0, earned: 0, activeWord: -1, quiz: null, quizPick: null, starsEarned: 0, leveledTo: null }); }
+  openProphet(id) { const i = this.data().findIndex((d) => d.id === id); if (!this.isUnlocked(i)) return; this.primeSpeech(); this.sfx("open"); this.setState({ screen: "stage", curId: id, sub: "arrive", panel: 0, pickedDec: null, pickedMod: null, goodCount: 0, earned: 0, activeWord: -1, quiz: null, quizPick: null, quizIdx: 0, ayahIdx: 0, starsEarned: 0, leveledTo: null }); }
   backToMap() { this.stopAudio(); if (this.synth) this.synth.cancel(); this.setState({ screen: "map" }); }
   beginStory() { this.sfx("page"); this.setState({ sub: "story", panel: 0, activeWord: -1 }); }
   nextPanel() { this.sfx("page"); const d = this.curData(); if (this.state.panel < d.panels.length - 1) this.setState({ panel: this.state.panel + 1, activeWord: -1 }); else this.setState({ sub: "decision", activeWord: -1 }); }
   pickDecision(w) { const d = this.curData(); const good = w === d.decision.good; this.sfx(good ? "good" : "soft"); this.setState((st) => ({ sub: "dres", pickedDec: w, goodCount: st.goodCount + (good ? 1 : 0), activeWord: -1 })); }
   toModern() { this.sfx("page"); this.setState({ sub: "modern", activeWord: -1 }); }
   pickModern(w) { const d = this.curData(); const good = w === d.modern.good; this.sfx(good ? "good" : "soft"); this.setState((st) => ({ sub: "mres", pickedMod: w, goodCount: st.goodCount + (good ? 1 : 0), activeWord: -1 })); }
-  // Mini-quiz recap: a quick "remember this?" before the reward.
+  // Qur'anic ayah beat: 3-4 verses with recitation + meaning, before the quiz.
+  toAyah() { this.sfx("page"); this.setState({ sub: "ayah", ayahIdx: 0, activeWord: -1 }); }
+  ayahList() { return PROPHET_AYAH[this.state.curId] || []; }
+  nextAyah() {
+    this.sfx("page");
+    if (this.state.ayahIdx < this.ayahList().length - 1) this.setState({ ayahIdx: this.state.ayahIdx + 1, activeWord: -1 });
+    else this.toQuiz();
+  }
+  prevAyah() { if (this.state.ayahIdx > 0) { this.sfx("page"); this.setState({ ayahIdx: this.state.ayahIdx - 1, activeWord: -1 }); } }
+
+  // Mini-quiz recap: a few quick "remember this?" questions before the reward.
   toQuiz() {
     const d = this.curData(); const L = this.state.lang === "ur";
     const C = (L && PROPHET_UR[d.id]) || d;
-    const correct = C.lesson || d.lesson;
-    // distractor: a different prophet's lesson
     const others = this.data().filter((x) => x.id !== d.id);
-    const od = others[Math.floor(Math.random() * others.length)];
-    const oC = (L && PROPHET_UR[od.id]) || od;
-    const wrong = oC.lesson || od.lesson;
-    const correctFirst = Math.random() < 0.5;
-    const opts = correctFirst ? [{ t: correct, ok: true }, { t: wrong, ok: false }] : [{ t: wrong, ok: false }, { t: correct, ok: true }];
-    this.setState({ sub: "quiz", quiz: { q: (L ? `${d.name} ${d.honor} ke safar ne humein kya sikhaya?` : `What did journeying with ${d.name} ${d.honor} teach us?`), opts }, quizPick: null, activeWord: -1 });
+    const rnd = (arr) => arr[Math.floor(Math.random() * arr.length)];
+    const mix = (a, b) => (Math.random() < 0.5 ? [a, b] : [b, a]);
+    const od1 = rnd(others), od2 = rnd(others.filter((x) => x.id !== od1.id));
+    const oC1 = (L && PROPHET_UR[od1.id]) || od1;
+    const lesson = C.lesson || d.lesson, wrongLesson = oC1.lesson || od1.lesson;
+    const items = [
+      { q: L ? `${d.name} ${d.honor} ke safar ne humein kya sikhaya?` : `What did journeying with ${d.name} ${d.honor} teach us?`,
+        opts: mix({ t: lesson, ok: true }, { t: wrongLesson, ok: false }) },
+      { q: L ? "Yeh kis nabi ka safar tha?" : "Whose journey was this?",
+        opts: mix({ t: `${d.name} ${d.honor}`, ok: true }, { t: `${od2.name} ${od2.honor}`, ok: false }) },
+    ];
+    this.setState({ sub: "quiz", quiz: { items }, quizIdx: 0, quizPick: null, activeWord: -1 });
   }
   pickQuiz(i) {
     if (this.state.quizPick != null) return;       // ignore double-taps
-    const ok = this.state.quiz.opts[i].ok; this.sfx(ok ? "good" : "soft");
-    // Reveal the correct answer briefly, then move on to the reward.
+    const item = this.state.quiz.items[this.state.quizIdx];
+    const ok = item.opts[i].ok; this.sfx(ok ? "good" : "soft");
     this.setState((st) => ({ quizPick: i, goodCount: st.goodCount + (ok ? 1 : 0) }), () => {
-      setTimeout(() => { if (this.state.sub === "quiz") this.toReward(); }, 1100);
+      setTimeout(() => {
+        if (this.state.sub !== "quiz") return;
+        if (this.state.quizIdx < this.state.quiz.items.length - 1) this.setState({ quizIdx: this.state.quizIdx + 1, quizPick: null, activeWord: -1 });
+        else this.toReward();
+      }, 1150);
     });
   }
   toReward() {
@@ -249,13 +276,16 @@ export default class ProphetsJourney extends React.Component {
 
   // Play a pre-generated Azure clip and drive word highlighting from its
   // stored word-boundary timings. Returns false if no clip is available.
-  playStatic(key) {
+  playStatic(key, even = 0) {
     const meta = this.manifest && this.manifest[key];
     if (!meta) return false;
     this.stopAudio();
     const audio = new Audio("/audio/" + key + ".mp3");
     this.audioEl = audio;
-    const w = meta.w || [];
+    // For Urdu the on-screen Roman words don't match the Urdu-script audio
+    // tokens, so sweep the highlight evenly across the clip instead.
+    let w = meta.w || [];
+    if (even > 0) { const d = meta.d || 1; w = []; for (let i = 0; i < even; i++) w.push([i, Math.round((i / even) * d)]); }
     const tick = () => {
       if (this.audioEl !== audio) return;
       const ms = audio.currentTime * 1000;
@@ -285,19 +315,39 @@ export default class ProphetsJourney extends React.Component {
     try { this.synth.speak(u); } catch (e) {}
   }
 
+  // Ayah beat: play the qari recitation, then narrate the meaning.
+  playAyah() {
+    const a = this.ayahList()[this.state.ayahIdx]; if (!a) return;
+    this.stopAudio();
+    const rec = new Audio(a.audio); this.audioEl = rec;
+    rec.onended = () => { if (this.audioEl === rec) { this.audioEl = null; this.narrateAyahMeaning(); } };
+    rec.play().catch(() => { if (this.audioEl === rec) this.audioEl = null; this.narrateAyahMeaning(); });
+  }
+  narrateAyahMeaning() {
+    const a = this.ayahList()[this.state.ayahIdx]; if (!a) return;
+    const text = this.state.lang === "ur" ? a.ur : a.en;
+    const r = lineNarration({ lang: this.state.lang, text });
+    this._lastSpoken = r.spoken; this._lastMap = r.map;
+    if (!this.playStatic(r.key)) this.speakWeb(r.spoken, r.map);
+  }
+  repeatRecitation() { const a = this.ayahList()[this.state.ayahIdx]; if (!a) return; this.stopAudio(); const rec = new Audio(a.audio); this.audioEl = rec; rec.play().catch(() => {}); }
+  playArabicVoice() { const a = this.ayahList()[this.state.ayahIdx]; if (!a) return; const r = lineNarration({ lang: "ar", text: a.ar }); this.playStatic(r.key); }
+
   narrateCurrent() {
     if (this.state.screen !== "stage" || this.state.muted || this.props.narration === false) return;
     const d = this.curData(); if (!d) return;
-    // The quiz question is generated at random, so it has no pre-made clip:
-    // speak it with the browser voice.
+    if (this.state.sub === "ayah") { this.playAyah(); return; }
+    // The quiz question is generated at random (no pre-made clip). Speak the
+    // English one with the browser voice; skip for Urdu (browser can't read it).
     if (this.state.sub === "quiz") {
-      if (this.state.quiz) { const { spoken, map } = this._assemble(this.state.quiz.q, "", ""); this.speakWeb(spoken, map); }
+      if (this.state.lang === "en" && this.state.quiz) { const item = this.state.quiz.items[this.state.quizIdx]; const { spoken, map } = this._assemble(item.q, "", ""); this.speakWeb(spoken, map); }
       return;
     }
     const beat = this.currentBeat();
-    const r = narrationForBeat({ d, u: PROPHET_UR[d.id] || null, lang: this.state.lang, name: this.myName(), sub: beat.sub, panel: beat.panel || 0, picked: beat.picked || null });
+    const r = narrationForBeat({ d, u: PROPHET_UR[d.id] || null, us: PROPHET_UR_SCRIPT[d.id] || null, lang: this.state.lang, name: this.myName(), sub: beat.sub, panel: beat.panel || 0, picked: beat.picked || null });
     this._lastSpoken = r.spoken; this._lastMap = r.map;
-    if (!this.playStatic(r.key)) this.speakWeb(r.spoken, r.map);
+    const even = this.state.lang === "ur" ? _tokenize(this.buildView().body).length : 0;
+    if (!this.playStatic(r.key, even)) this.speakWeb(r.spoken, r.map);
   }
 
   // Tokenize+normalize an arbitrary line for the browser-voice fallback.
@@ -316,7 +366,17 @@ export default class ProphetsJourney extends React.Component {
   toggleLang() { this.setState((st) => ({ lang: st.lang === "ur" ? "en" : "ur", activeWord: -1 }), () => { try { localStorage.setItem("ipj_lang_v2", this.state.lang); } catch (e) {} this.stopAudio(); this._spokeKey = null; this.narrateCurrent(); }); }
 
   // ---------- SCENE PIECES ----------
-  moonEl() { return E("div", { key: "moon", style: { position: "absolute", top: "12%", left: "14%", width: "56px", height: "56px", borderRadius: "50%", background: "radial-gradient(circle at 38% 35%, #fff, #e9e2c8 70%)", boxShadow: "0 0 50px 12px rgba(255,255,230,.32)" } }); }
+  moonEl(p) {
+    // Moon drifts to a different spot/size per prophet so no two skies match.
+    const id = (p && p.id) || 1; const top = 8 + ((id * 7) % 14); const left = 10 + ((id * 17) % 70); const size = 44 + ((id * 11) % 30);
+    return E("div", { key: "moon", style: { position: "absolute", top: top + "%", left: left + "%", width: size + "px", height: size + "px", borderRadius: "50%", background: "radial-gradient(circle at 38% 35%, #fff, #e9e2c8 70%)", boxShadow: "0 0 50px 12px rgba(255,255,230,.32)" } });
+  }
+  // A large coloured nebula wash, placed per prophet — gives each story its own
+  // distinct sky even when two prophets share a terrain type.
+  auroraEl(p) {
+    const id = p.id; const x = 12 + ((id * 29) % 76); const y = 6 + ((id * 23) % 40); const size = 60 + ((id * 13) % 50);
+    return E("div", { key: "aurora", style: { position: "absolute", left: x + "%", top: y + "%", width: size + "%", height: size + "%", transform: "translate(-50%,-50%)", background: `radial-gradient(circle, ${p.accent}3a 0%, ${p.accent}14 38%, transparent 70%)`, filter: "blur(8px)", pointerEvents: "none" } });
+  }
   starField(maxY) { const reduce = this.props.reduceMotion; return this.stars.filter((st) => st.y < (maxY || 72)).map((st, i) => E("div", { key: "st" + i, style: { position: "absolute", left: st.x + "%", top: st.y + "%", width: st.s + "px", height: st.s + "px", borderRadius: "50%", background: "#fff", boxShadow: "0 0 4px #fff", animation: reduce ? "none" : `ipjTwinkle ${st.d}s ease-in-out ${st.delay}s infinite` } })); }
   cloudEls(p) { const reduce = this.props.reduceMotion; const a = p.accent; const cs = p.terrain === "sky" ? [{ l: "8%", b: "58%", w: 130 }, { l: "58%", b: "48%", w: 160 }, { l: "34%", b: "66%", w: 100 }] : [{ l: "12%", b: "62%", w: 120 }, { l: "66%", b: "56%", w: 140 }];
     return cs.map((c, i) => E("div", { key: "cl" + i, style: { position: "absolute", left: c.l, bottom: c.b, width: c.w + "px", height: (c.w * 0.3) + "px", background: a + "2e", borderRadius: "50%", filter: "blur(4px)", animation: reduce ? "none" : `ipjDrift ${16 + i * 5}s ease-in-out ${i}s infinite alternate` } })); }
@@ -398,9 +458,13 @@ export default class ProphetsJourney extends React.Component {
   camProgress() { const d = this.curData(); if (!d) return 0; const N = d.panels.length, st = this.state.sub; const beat = st === "arrive" ? 0 : st === "story" ? this.state.panel + 1 : N + 1; return Math.min(1, beat / (N + 1)); }
   buildScene(p) {
     const t = this.camProgress();
-    const sky = `linear-gradient(180deg, #120c2c 0%, #241a52 52%, ${p.accent}aa 118%)`;
+    // Per-prophet sky: varied angle + a mid tint blended from the accent, so
+    // even same-terrain prophets get a distinct palette.
+    const ang = 150 + ((p.id * 9) % 60);
+    const sky = `linear-gradient(${ang}deg, #100a26 0%, #241a52 46%, ${p.accent}55 80%, ${p.accent}aa 120%)`;
     return E("div", { style: { position: "absolute", inset: 0, overflow: "hidden", background: sky } },
-      this.moonEl(), ...this.starField(p.terrain === "sky" ? 82 : 64), ...this.cloudEls(p),
+      this.auroraEl(p),
+      this.moonEl(p), ...this.starField(p.terrain === "sky" ? 82 : 64), ...this.cloudEls(p),
       ...this.silhouette(p, t),
       this.prophetLight(p, t),
       ...this.foreground(p), ...this.particles(p), ...this.rainEls(p), ...this.birdEls(p),
@@ -428,9 +492,19 @@ export default class ProphetsJourney extends React.Component {
     else if (st === "decision") v = { key: "dec", tag: L ? "Aap ka faisla" : "Your Choice", icon: "🤔", tagColor: "#ffb86b", body: dec.q, choices: [{ letter: "A", t: dec.a.t, onPick: () => this.pickDecision("a") }, { letter: "B", t: dec.b.t, onPick: () => this.pickDecision("b") }] };
     else if (st === "dres") { const ch = dec[this.state.pickedDec]; v = { key: "dres", tag: L ? "Kahani mein" : "In the Story", icon: "🌟", tagColor: "#f5c451", body: ch.r, primary: { label: L ? "Aaj ki zindagi mein ›" : "Bring it to today ›", on: () => this.toModern() } }; }
     else if (st === "modern") v = { key: "mod", tag: L ? "Aaj" : "Today", icon: "🏠", tagColor: "#7fe0c0", body: mod.q, choices: [{ letter: "A", t: mod.a.t, onPick: () => this.pickModern("a") }, { letter: "B", t: mod.b.t, onPick: () => this.pickModern("b") }] };
-    else if (st === "mres") { const ch = mod[this.state.pickedMod]; v = { key: "mres", tag: L ? "Sochiye" : "Reflection", icon: "💡", tagColor: "#7fe0c0", body: ch.r, primary: { label: L ? "Chhota sawaal ›" : "Quick recap ›", on: () => this.toQuiz() } }; if (d.dua && showAr) { v.ar = d.dua.ar; v.arEn = "Du’a: " + d.dua.en; } }
-    else if (st === "quiz") { const q = this.state.quiz || { q: "", opts: [] }; const picked = this.state.quizPick;
-      v = { key: "quiz", tag: L ? "Yaad hai?" : "Remember?", icon: "🧠", tagColor: "#ffb86b", body: q.q,
+    else if (st === "mres") { const ch = mod[this.state.pickedMod]; v = { key: "mres", tag: L ? "Sochiye" : "Reflection", icon: "💡", tagColor: "#7fe0c0", body: ch.r, primary: { label: L ? "Quran ki aayaat ›" : "Verses from the Qur’an ›", on: () => this.toAyah() } }; if (d.dua && showAr) { v.ar = d.dua.ar; v.arEn = "Du’a: " + d.dua.en; } }
+    else if (st === "ayah") {
+      const list = this.ayahList(); const a = list[this.state.ayahIdx] || {}; const last = this.state.ayahIdx >= list.length - 1;
+      const meaning = (L ? a.ur : a.en) || "";
+      v = { key: "ayah" + this.state.ayahIdx, tag: (L ? "قرآن · " : "Qur’an · ") + (this.state.ayahIdx + 1) + "/" + (list.length || 1), icon: "☪", tagColor: "#7fe0c0",
+        body: meaning, rtl: L,
+        ayahAr: a.ar, ayahRef: a.ref,
+        ayahControls: { repeat: () => this.repeatRecitation(), arabic: () => this.playArabicVoice(), prev: this.state.ayahIdx > 0 ? () => this.prevAyah() : null,
+          repeatLabel: L ? "تلاوت" : "Recite", arabicLabel: L ? "عربی آواز" : "Arabic voice" },
+        primary: { label: last ? (L ? "Chhota sawaal ›" : "Quick recap ›") : (L ? "Agli aayat ›" : "Next verse ›"), on: () => this.nextAyah() } };
+    }
+    else if (st === "quiz") { const items = (this.state.quiz && this.state.quiz.items) || []; const q = items[this.state.quizIdx] || { q: "", opts: [] }; const picked = this.state.quizPick;
+      v = { key: "quiz" + this.state.quizIdx, tag: (L ? "Yaad hai? · " : "Remember? · ") + (this.state.quizIdx + 1) + "/" + (items.length || 1), icon: "🧠", tagColor: "#ffb86b", body: q.q,
         quizOpts: q.opts.map((o, i) => ({ letter: String.fromCharCode(65 + i), t: o.t, ok: o.ok, picked: picked === i, revealed: picked != null, onPick: () => this.pickQuiz(i) })) }; }
     else if (st === "reward") { const lesson = (C.lesson || d.lesson), badge = (C.badge || d.badge);
       const body = rewardText({ name: nm, lang: this.state.lang, prophetName: d.name, honor: d.honor, lesson });
@@ -447,18 +521,25 @@ export default class ProphetsJourney extends React.Component {
     const completed = st.progress.completed;
     const DATA = this.data();
     const starsMap = st.progress.stars || {};
+    // Every prophet sits on a single winding rope: the button is centred on the
+    // rope, the label sits to one side, alternating, so the 25 read as one path.
+    const STEP = 112; // px per node
     const nodes = DATA.map((d, i) => {
       const done = completed.includes(d.id), unlocked = this.isUnlocked(i), current = unlocked && !done, side = i % 2 === 0 ? "left" : "right";
-      const rowStyle = `position:relative;display:flex;align-items:center;gap:14px;width:84%;max-width:540px;margin:0 auto 6px;padding:14px 0;${side === "left" ? "flex-direction:row;" : "flex-direction:row-reverse;text-align:right;"}`;
+      const cx = 50 + (side === "left" ? -14 : 14); // button drifts left/right of centre
       const a = d.accent; let btnBg, ring, medalText, medalColor, dim = "";
       if (done) { btnBg = `linear-gradient(135deg, ${a}, ${a}aa)`; ring = "0 0 0 3px rgba(245,196,81,.4)"; medalText = "✓"; medalColor = "#fff"; }
       else if (current) { btnBg = "linear-gradient(180deg,#ffd56b,#f5b836)"; ring = "0 0 26px 4px rgba(245,196,81,.6)"; medalText = String(d.id); medalColor = "#1a1140"; }
       else { btnBg = "rgba(255,255,255,.05)"; ring = "inset 0 0 0 2px rgba(255,255,255,.12)"; medalText = "🔒"; medalColor = "rgba(255,255,255,.5)"; dim = "opacity:.45;"; }
-      const btnStyle = `position:relative;flex:0 0 auto;width:72px;height:72px;border-radius:50%;border:none;cursor:${unlocked ? "pointer" : "default"};background:${btnBg};box-shadow:${ring};display:flex;align-items:center;justify-content:center;transition:transform .15s;${current ? "animation:ipjFloat 3s ease-in-out infinite;" : ""}`;
+      const btnStyle = `position:absolute;top:${i * STEP + STEP / 2}px;left:${cx}%;transform:translate(-50%,-50%);width:70px;height:70px;border-radius:50%;border:none;cursor:${unlocked ? "pointer" : "default"};background:${btnBg};box-shadow:${ring};display:flex;align-items:center;justify-content:center;z-index:2;${current ? "animation:ipjFloat 3s ease-in-out infinite;" : ""}`;
+      const labelLeft = side === "left" ? `${cx}% + 46px` : "auto";
+      const labelRight = side === "right" ? `${100 - cx}% + 46px` : "auto";
+      const labelStyle = `position:absolute;top:${i * STEP + STEP / 2}px;transform:translateY(-50%);${side === "left" ? `left:calc(${labelLeft});text-align:left;` : `right:calc(${labelRight});text-align:right;`}max-width:46%;z-index:2;`;
       const medalStyle = `font-family:'Fredoka';font-weight:600;font-size:${medalText.length > 1 ? "24px" : "26px"};color:${medalColor};`;
       const stars = done ? (starsMap[d.id] || 1) : 0;
-      return { name: d.name, ar: d.ar, epithet: d.epithet, rowStyle, btnStyle, medalStyle, medalText, labelStyle: "flex:1;min-width:0;", dim, unlocked, done, stars, onClick: () => this.openProphet(d.id) };
+      return { name: d.name, ar: d.ar, epithet: d.epithet, btnStyle, medalStyle, medalText, labelStyle, dim, unlocked, done, stars, onClick: () => this.openProphet(d.id) };
     });
+    const ropeHeight = DATA.length * STEP + 40;
     // Badge gallery: earned badges fill the shelf, locked ones stay dim.
     const L = st.lang === "ur";
     const badges = DATA.map((d) => {
@@ -469,7 +550,7 @@ export default class ProphetsJourney extends React.Component {
     const level = levelFor(st.progress.noor);
     const cur = this.curData(); let curVM = {}, scene = null, view = {}, sceneKey = "";
     if (cur) {
-      const stepNames = { arrive: "Arrive", story: "Story", decision: "Choose", dres: "Choose", modern: "Today", mres: "Today", quiz: "Recap", reward: "Reward" };
+      const stepNames = { arrive: "Arrive", story: "Story", decision: "Choose", dres: "Choose", modern: "Today", mres: "Today", ayah: "Qur’an", quiz: "Recap", reward: "Reward" };
       curVM = { name: cur.name, ar: cur.ar, honor: cur.honor, stepLabel: stepNames[st.sub] || "" };
       const sk = cur.id + "|" + st.sub + "|" + st.panel;
       if (this._sk !== sk) { this._scene = this.buildScene(cur); this._sk = sk; }
@@ -482,10 +563,11 @@ export default class ProphetsJourney extends React.Component {
       isProfile: st.screen === "profile", isMap: st.screen === "map", isStage: st.screen === "stage",
       skyStars: E("div", null, ...this.starField(100)),
       profiles, profileName: prof ? prof.name : "", profileInitial: prof ? prof.initial : "", profileGrad: prof ? prof.grad : "#fff", profilePic: prof ? prof.pic : "",
-      noor: st.progress.noor, badgeCount: completed.length, doneCount: completed.length, nodes,
+      noor: st.progress.noor, badgeCount: completed.length, doneCount: completed.length, nodes, ropeHeight,
       badges, level, streak: st.progress.streak || 0, celebrate: st.celebrate, sceneKey,
       floatingAvatar: cur ? this.floatingAvatar() : null,
-      mapMedallion: prof ? this.picMedallion(prof.pic, 58, prof.grad) : null,
+      mapMedallion: prof ? this.picMedallion(prof.pic, 64, prof.grad) : null,
+      cardOffset: cur ? CARD_OFFSETS[this.beatIndex() % CARD_OFFSETS.length] : { x: 0, y: 0 },
       goProfile: () => this.goProfile(), cur: curVM, scene, view,
       hudhud: cur ? this.hudhudEl() : null, hudhudPos: showHud ? "top:84px;right:18px;" : "top:84px;right:18px;opacity:0;pointer-events:none;",
       backToMap: () => this.backToMap(),
@@ -508,7 +590,9 @@ export default class ProphetsJourney extends React.Component {
 
   // Circular photo medallion (gradient ring + soft glow) for a traveller.
   picMedallion(pic, size, grad) {
-    return E("div", { style: { width: size + "px", height: size + "px", borderRadius: "50%", padding: "3px", background: grad, boxShadow: "0 0 22px rgba(245,196,81,.45), 0 6px 18px rgba(0,0,0,.5)" } },
+    // Cap by viewport width so big medallions shrink gracefully on small phones.
+    const dim = `min(${size}px, ${Math.round(size / 4.6)}vw)`;
+    return E("div", { style: { width: dim, height: dim, borderRadius: "50%", padding: "3px", background: grad, boxShadow: "0 0 22px rgba(245,196,81,.45), 0 6px 18px rgba(0,0,0,.5)" } },
       E("div", { style: { width: "100%", height: "100%", borderRadius: "50%", overflow: "hidden", border: "2px solid rgba(255,255,255,.7)" } },
         E("img", { src: pic, alt: "", style: { width: "100%", height: "100%", objectFit: "cover", display: "block" } })
       )
@@ -516,7 +600,7 @@ export default class ProphetsJourney extends React.Component {
   }
   // Which beat we're on — drives where the floating avatar hops to next.
   beatIndex() {
-    const st = this.state; const order = { arrive: 0, story: 1, decision: 2, dres: 3, modern: 4, mres: 5, quiz: 6, reward: 7 };
+    const st = this.state; const order = { arrive: 0, story: 1, decision: 2, dres: 3, modern: 4, mres: 5, ayah: 6, quiz: 7, reward: 8 };
     return (order[st.sub] || 0) + (st.sub === "story" ? st.panel : 0);
   }
   // The selected traveller, floating through the scene — a new spot/size each beat.
@@ -541,7 +625,7 @@ export default class ProphetsJourney extends React.Component {
   render() {
     const V = this.renderVals();
     return (
-      <div style={s("position:relative;width:100%;min-height:100vh;height:100vh;overflow:hidden;font-family:'Nunito',system-ui,sans-serif;background:radial-gradient(120% 100% at 50% 0%,#1a1140 0%,#0c0820 70%);color:#f4eede;")}>
+      <div style={s("position:relative;width:100%;min-height:100dvh;height:100dvh;overflow:hidden;font-family:'Nunito',system-ui,sans-serif;background:radial-gradient(120% 100% at 50% 0%,#1a1140 0%,#0c0820 70%);color:#f4eede;")}>
 
         {/* ============ PROFILE SELECT ============ */}
         {V.isProfile && (
@@ -555,7 +639,7 @@ export default class ProphetsJourney extends React.Component {
             <div style={s("margin-top:46px;opacity:.85;font-size:14px;letter-spacing:3px;text-transform:uppercase;")}>{V.t.chooseTraveler}</div>
             <div style={s("display:flex;gap:22px;margin-top:22px;flex-wrap:wrap;justify-content:center;animation:ipjRise .7s .1s ease both;")}>
               {V.profiles.map((p, i) => (
-                <button key={i} className="ipj-traveler" onClick={p.onPick} style={s("cursor:pointer;background:rgba(255,255,255,.05);border:1px solid rgba(245,196,81,.25);border-radius:26px;padding:26px 30px 22px;width:170px;display:flex;flex-direction:column;align-items:center;gap:14px;color:#f4eede;backdrop-filter:blur(4px);")}>
+                <button key={i} className="ipj-traveler" onClick={p.onPick} style={s("cursor:pointer;background:rgba(255,255,255,.05);border:1px solid rgba(245,196,81,.25);border-radius:26px;padding:clamp(18px,5vw,26px) clamp(20px,7vw,30px) clamp(16px,4vw,22px);width:clamp(140px,42vw,170px);display:flex;flex-direction:column;align-items:center;gap:14px;color:#f4eede;backdrop-filter:blur(4px);")}>
                   <div style={s(`width:96px;height:96px;border-radius:50%;padding:3px;background:${p.grad};animation:ipjGlow 3.5s ease-in-out infinite;`)}>
                     <div style={s("width:100%;height:100%;border-radius:50%;overflow:hidden;border:2px solid rgba(255,255,255,.7);")}>
                       <img src={p.pic} alt={p.name} style={s("width:100%;height:100%;object-fit:cover;display:block;")} />
@@ -610,25 +694,28 @@ export default class ProphetsJourney extends React.Component {
               <div style={s("font-family:'Fredoka';font-weight:600;font-size:clamp(22px,5vw,30px);")}>{V.t.yourJourney}</div>
               <div style={s("opacity:.6;font-size:13px;")}>{V.journeySub}</div>
             </div>
-            <div className="ipj-scroll" style={s("flex:1;overflow-y:auto;position:relative;padding:10px 0 80px;")}>
-              <div style={s("position:absolute;left:50%;top:0;bottom:0;width:0;border-left:3px dashed rgba(245,196,81,.22);transform:translateX(-50%);")}></div>
-              {V.nodes.map((n, i) => (
-                <div key={i} style={s(n.rowStyle)}>
-                  <button onClick={n.onClick} style={s(n.btnStyle)}>
-                    <span style={s(n.medalStyle)}>{n.medalText}</span>
-                  </button>
-                  <div style={s(n.labelStyle)}>
-                    <div style={s("font-family:'Fredoka';font-weight:600;font-size:16px;line-height:1.05;" + n.dim)}>{n.name}</div>
-                    <div style={s("font-family:'Amiri',serif;font-size:15px;color:#f5c451;" + n.dim)}>{n.ar}</div>
-                    <div style={s("font-size:11px;opacity:.6;" + n.dim)}>{n.epithet}</div>
-                    {n.done && (
-                      <div style={s("font-size:13px;letter-spacing:1px;margin-top:2px;")}>
-                        {[0, 1, 2].map((k) => <span key={k} style={s(k < n.stars ? "color:#f5c451;" : "color:rgba(255,255,255,.18);")}>★</span>)}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
+            <div className="ipj-scroll" style={s("flex:1;overflow-y:auto;position:relative;padding:10px 0 30px;")}>
+              <div style={s(`position:relative;width:100%;max-width:560px;margin:0 auto;height:${V.ropeHeight}px;`)}>
+                {/* the flowing rope */}
+                <div className="ipj-rope" style={s("position:absolute;left:50%;top:6px;bottom:6px;width:6px;border-radius:6px;transform:translateX(-50%);box-shadow:0 0 14px rgba(245,196,81,.5);")}></div>
+                {V.nodes.map((n, i) => (
+                  <React.Fragment key={i}>
+                    <button onClick={n.onClick} style={s(n.btnStyle)}>
+                      <span style={s(n.medalStyle)}>{n.medalText}</span>
+                    </button>
+                    <div style={s(n.labelStyle)}>
+                      <div style={s("font-family:'Fredoka';font-weight:600;font-size:15px;line-height:1.05;" + n.dim)}>{n.name}</div>
+                      <div style={s("font-family:'Amiri',serif;font-size:14px;color:#f5c451;" + n.dim)}>{n.ar}</div>
+                      <div style={s("font-size:10px;opacity:.6;" + n.dim)}>{n.epithet}</div>
+                      {n.done && (
+                        <div style={s("font-size:12px;letter-spacing:1px;margin-top:2px;")}>
+                          {[0, 1, 2].map((k) => <span key={k} style={s(k < n.stars ? "color:#f5c451;" : "color:rgba(255,255,255,.18);")}>★</span>)}
+                        </div>
+                      )}
+                    </div>
+                  </React.Fragment>
+                ))}
+              </div>
 
               {/* ---- Badge gallery ---- */}
               <div style={s("width:88%;max-width:560px;margin:18px auto 0;padding:16px;border-radius:20px;background:rgba(255,255,255,.04);border:1px solid rgba(245,196,81,.18);")}>
@@ -658,30 +745,51 @@ export default class ProphetsJourney extends React.Component {
             {V.floatingAvatar}
             {V.view.isReward && this.confetti(V.celebrate)}
 
-            <div style={s("position:absolute;top:0;left:0;right:0;display:flex;align-items:center;gap:10px;padding:14px 16px;z-index:10;background:linear-gradient(180deg,rgba(10,7,26,.72),transparent);")}>
-              <button onClick={V.backToMap} style={s("cursor:pointer;border:1px solid rgba(255,255,255,.2);background:rgba(10,7,26,.4);color:#f4eede;border-radius:40px;padding:8px 16px;font-weight:700;backdrop-filter:blur(6px);")}>‹ Map</button>
+            <div className="ipj-stage-top" style={s("position:absolute;top:0;left:0;right:0;display:flex;align-items:center;gap:10px;padding:14px 16px;z-index:10;background:linear-gradient(180deg,rgba(10,7,26,.72),transparent);")}>
+              <button onClick={V.backToMap} style={s("cursor:pointer;flex:0 0 auto;border:1px solid rgba(255,255,255,.2);background:rgba(10,7,26,.4);color:#f4eede;border-radius:40px;padding:8px 14px;font-weight:700;backdrop-filter:blur(6px);")}>‹ Map</button>
               <div style={s("flex:1;text-align:center;min-width:0;")}>
-                <div style={s("font-family:'Fredoka';font-weight:600;font-size:clamp(18px,4.4vw,26px);text-shadow:0 2px 14px rgba(0,0,0,.6);")}>{V.cur.name} <span style={s("opacity:.8;font-size:.8em;")}>{V.cur.honor}</span></div>
-                <div style={s("font-family:'Amiri',serif;color:#f5c451;font-size:clamp(15px,3.6vw,20px);text-shadow:0 2px 10px rgba(0,0,0,.7);")}>{V.cur.ar}</div>
+                <div style={s("font-family:'Fredoka';font-weight:600;font-size:clamp(16px,4.4vw,26px);line-height:1.1;text-shadow:0 2px 14px rgba(0,0,0,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;")}>{V.cur.name} <span style={s("opacity:.8;font-size:.8em;")}>{V.cur.honor}</span></div>
+                <div style={s("font-family:'Amiri',serif;color:#f5c451;font-size:clamp(14px,3.6vw,20px);text-shadow:0 2px 10px rgba(0,0,0,.7);")}>{V.cur.ar}</div>
               </div>
-              <button onClick={V.toggleMute} title="Sound" style={s("cursor:pointer;flex:0 0 auto;width:42px;height:42px;border-radius:50%;border:1px solid rgba(255,255,255,.2);background:rgba(10,7,26,.4);color:#f4eede;font-size:18px;backdrop-filter:blur(6px);")}>{V.muteIcon}</button>
-              <button onClick={V.toggleLang} title="Language" style={s("cursor:pointer;flex:0 0 auto;height:42px;padding:0 14px;border-radius:21px;border:1px solid rgba(255,255,255,.2);background:rgba(10,7,26,.4);color:#f4eede;font-family:'Fredoka';font-weight:600;font-size:14px;backdrop-filter:blur(6px);")}>{V.langLabel}</button>
-              <button onClick={V.replay} title="Replay narration" style={s("cursor:pointer;flex:0 0 auto;width:42px;height:42px;border-radius:50%;border:1px solid rgba(255,255,255,.2);background:rgba(10,7,26,.4);color:#f4eede;font-size:18px;backdrop-filter:blur(6px);")}>↻</button>
+              <button onClick={V.toggleMute} className="ipj-round" title="Sound" style={s("cursor:pointer;flex:0 0 auto;width:42px;height:42px;border-radius:50%;border:1px solid rgba(255,255,255,.2);background:rgba(10,7,26,.4);color:#f4eede;font-size:18px;backdrop-filter:blur(6px);")}>{V.muteIcon}</button>
+              <button onClick={V.toggleLang} title="Language" style={s("cursor:pointer;flex:0 0 auto;height:42px;padding:0 13px;border-radius:21px;border:1px solid rgba(255,255,255,.2);background:rgba(10,7,26,.4);color:#f4eede;font-family:'Fredoka';font-weight:600;font-size:14px;backdrop-filter:blur(6px);")}>{V.langLabel}</button>
+              <button onClick={V.replay} className="ipj-round" title="Replay narration" style={s("cursor:pointer;flex:0 0 auto;width:42px;height:42px;border-radius:50%;border:1px solid rgba(255,255,255,.2);background:rgba(10,7,26,.4);color:#f4eede;font-size:18px;backdrop-filter:blur(6px);")}>↻</button>
             </div>
 
             <div style={s("position:absolute;z-index:9;" + V.hudhudPos)}>{V.hudhud}</div>
 
             <div style={s("position:absolute;left:0;right:0;bottom:0;z-index:12;display:flex;justify-content:center;padding:0 14px 18px;")}>
-              <div key={V.view.key} style={s("width:100%;max-width:640px;background:linear-gradient(180deg,rgba(31,22,58,.86),rgba(18,12,40,.94));border:1px solid rgba(245,196,81,.28);border-radius:24px;padding:20px 22px 18px;backdrop-filter:blur(10px);box-shadow:0 16px 50px rgba(0,0,0,.5);animation:ipjRise .4s ease both;")}>
+             <div style={s(`width:100%;max-width:640px;transition:${this.props.reduceMotion ? "none" : "transform 1.2s cubic-bezier(.4,.1,.2,1)"};transform:translate(${V.cardOffset.x}vw,${V.cardOffset.y}vh);`)}>
+              <div className={this.props.reduceMotion ? "" : "ipj-card-float"}>
+              <div key={V.view.key} className="ipj-scroll" style={s("width:100%;max-height:calc(100dvh - 132px);overflow-y:auto;background:linear-gradient(180deg,rgba(31,22,58,.86),rgba(18,12,40,.94));border:1px solid rgba(245,196,81,.28);border-radius:24px;padding:clamp(14px,3.5vw,20px) clamp(15px,4vw,22px);backdrop-filter:blur(10px);box-shadow:0 16px 50px rgba(0,0,0,.5);animation:ipjRise .4s ease both;")}>
 
                 <div style={s("display:flex;align-items:center;gap:9px;margin-bottom:8px;")}>
                   <span style={s("font-size:20px;")}>{V.view.icon}</span>
                   <span style={s(`font-family:'Fredoka';font-weight:600;font-size:15px;letter-spacing:.5px;color:${V.view.tagColor};text-transform:uppercase;`)}>{V.view.tag}</span>
                 </div>
 
-                <div style={s("font-size:clamp(16px,4vw,20px);line-height:1.62;font-weight:600;text-wrap:pretty;")}>
+                {V.view.ayahAr && (
+                  <div style={s("margin-bottom:12px;")}>
+                    <div style={s("padding:16px 16px 12px;border-radius:16px;background:rgba(127,224,192,.07);border:1px solid rgba(127,224,192,.22);")}>
+                      <div style={s("font-family:'Amiri',serif;font-size:clamp(22px,6vw,32px);color:#bff5e2;text-align:right;direction:rtl;line-height:2;text-shadow:0 1px 10px rgba(0,0,0,.5);")}>{V.view.ayahAr}</div>
+                      <div style={s("display:flex;align-items:center;justify-content:space-between;margin-top:10px;gap:8px;flex-wrap:wrap;")}>
+                        <span style={s("font-size:12px;opacity:.7;color:#7fe0c0;font-weight:700;")}>{V.view.ayahRef}</span>
+                        <div style={s("display:flex;gap:8px;")}>
+                          <button onClick={V.view.ayahControls.repeat} className="ipj-choice" style={s("cursor:pointer;border:1px solid rgba(127,224,192,.4);background:rgba(127,224,192,.12);color:#eafff7;border-radius:30px;padding:6px 13px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;")}>▶ {V.view.ayahControls.repeatLabel}</button>
+                          <button onClick={V.view.ayahControls.arabic} className="ipj-choice" style={s("cursor:pointer;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.06);color:#f4eede;border-radius:30px;padding:6px 13px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;")}>🔊 {V.view.ayahControls.arabicLabel}</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div style={s(`font-size:clamp(16px,4vw,20px);line-height:1.62;font-weight:600;text-wrap:pretty;${V.view.rtl ? "direction:rtl;text-align:right;font-family:'Amiri',serif;line-height:2;" : ""}`)}>
                   {(V.view.words || []).map((w, i) => <span key={i} style={s(w.style)}>{w.t}</span>)}
                 </div>
+
+                {V.view.ayahControls && V.view.ayahControls.prev && (
+                  <button onClick={V.view.ayahControls.prev} className="ipj-choice" style={s("cursor:pointer;margin-top:12px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.05);color:#f4eede;border-radius:30px;padding:7px 14px;font-size:13px;font-weight:700;")}>‹ {this.state.lang === "ur" ? "Pichhli aayat" : "Previous verse"}</button>
+                )}
 
                 {V.view.ar && (
                   <div style={s("margin-top:14px;padding:12px 14px;border-radius:14px;background:rgba(245,196,81,.08);border:1px solid rgba(245,196,81,.18);")}>
@@ -744,6 +852,8 @@ export default class ProphetsJourney extends React.Component {
                 )}
 
               </div>
+              </div>
+             </div>
             </div>
           </div>
         )}

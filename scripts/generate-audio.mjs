@@ -26,7 +26,9 @@ process.on("unhandledRejection", (e) => { console.error("UNHANDLED REJECTION:", 
 
 import { PROPHET_DATA } from "../app/data/prophets-data.js";
 import { PROPHET_UR } from "../app/data/prophets-ur.js";
-import { narrationForBeat, enumerateBeats, TRAVELLER_NAMES } from "../app/lib/narration.js";
+import { PROPHET_UR_SCRIPT } from "../app/data/prophets-ur-script.js";
+import { PROPHET_AYAH } from "../app/data/prophets-ayah.js";
+import { narrationForBeat, enumerateBeats, lineNarration, TRAVELLER_NAMES } from "../app/lib/narration.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -36,14 +38,16 @@ const OUT_DIR = path.join(ROOT, "public", "audio");
 const VOICE = {
   en: process.env.VOICE_EN || "en-US-JennyNeural",
   ur: process.env.VOICE_UR || "ur-PK-UzmaNeural",
+  ar: process.env.VOICE_AR || "ar-SA-HamedNeural", // spoken-Arabic aid (qari audio is separate)
 };
-const STYLE = { en: process.env.STYLE_EN || "friendly", ur: "" }; // ur voices have no styles
-const LOCALE = { en: "en-US", ur: "ur-PK" };
+const STYLE = { en: process.env.STYLE_EN || "friendly", ur: "", ar: "" };
+const LOCALE = { en: "en-US", ur: "ur-PK", ar: "ar-SA" };
 const RATE = process.env.TTS_RATE || "-6%"; // a touch slower for a calm storyteller
 
 const args = process.argv.slice(2);
 const FORCE = args.includes("--force");
 const LIMIT = (() => { const i = args.indexOf("--limit"); return i >= 0 ? parseInt(args[i + 1], 10) : Infinity; })();
+const ONLY_LANG = (() => { const i = args.indexOf("--lang"); return i >= 0 ? args[i + 1] : null; })();
 
 // --- credentials ----------------------------------------------------------
 let KEY = process.env.SPEECH_KEY;
@@ -69,10 +73,11 @@ const xmlEscape = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(
 
 // Add gentle pauses after sentence-ending punctuation and clause commas.
 function withBreaks(text) {
+  // Handles Latin (.!?,—:;) and Urdu (۔ ؟ ؛ ،) punctuation alike.
   return xmlEscape(text)
-    .replace(/([.!?])(\s+)/g, '$1<break time="420ms"/>$2')
-    .replace(/([—:;])(\s+)/g, '$1<break time="260ms"/>$2')
-    .replace(/(,)(\s+)/g, '$1<break time="140ms"/>$2');
+    .replace(/([.!?۔؟])(\s+)/g, '$1<break time="420ms"/>$2')
+    .replace(/([—:;؛])(\s+)/g, '$1<break time="260ms"/>$2')
+    .replace(/([,،])(\s+)/g, '$1<break time="140ms"/>$2');
 }
 
 function buildSsml(spoken, lang) {
@@ -146,17 +151,55 @@ function allClips() {
   const clips = new Map(); // key -> { spoken, lang, map }
   for (const d of PROPHET_DATA) {
     const u = PROPHET_UR[d.id] || null;
+    const us = PROPHET_UR_SCRIPT[d.id] || null;
     for (const lang of ["en", "ur"]) {
+      if (ONLY_LANG && lang !== ONLY_LANG) continue;
       for (const name of TRAVELLER_NAMES) {
-        for (const beat of enumerateBeats(d, lang === "ur" ? u : null)) {
-          const r = narrationForBeat({ d, u, lang, name, sub: beat.sub, panel: beat.panel || 0, picked: beat.picked || null });
+        for (const beat of enumerateBeats(d, lang === "ur" ? (us || u) : null)) {
+          const r = narrationForBeat({ d, u, us, lang, name, sub: beat.sub, panel: beat.panel || 0, picked: beat.picked || null });
           if (!r.spoken) continue;
           if (!clips.has(r.key)) clips.set(r.key, { spoken: r.spoken, lang, map: r.map });
         }
       }
     }
   }
+  // Ayah audio: spoken Arabic (ar) + EN meaning + UR meaning, per verse.
+  for (const id of Object.keys(PROPHET_AYAH)) {
+    for (const a of PROPHET_AYAH[id]) {
+      for (const [lang, text] of [["ar", a.ar], ["en", a.en], ["ur", a.ur]]) {
+        if (ONLY_LANG && lang !== ONLY_LANG) continue;
+        const r = lineNarration({ lang, text });
+        if (r.spoken && !clips.has(r.key)) clips.set(r.key, { spoken: r.spoken, lang, map: r.map });
+      }
+    }
+  }
   return clips;
+}
+
+// Full valid key set across ALL languages (ignores --lang), for pruning.
+function validKeySet() {
+  const keys = new Set();
+  for (const d of PROPHET_DATA) {
+    const u = PROPHET_UR[d.id] || null;
+    const us = PROPHET_UR_SCRIPT[d.id] || null;
+    for (const lang of ["en", "ur"]) {
+      for (const name of TRAVELLER_NAMES) {
+        for (const beat of enumerateBeats(d, lang === "ur" ? (us || u) : null)) {
+          const r = narrationForBeat({ d, u, us, lang, name, sub: beat.sub, panel: beat.panel || 0, picked: beat.picked || null });
+          if (r.spoken) keys.add(r.key);
+        }
+      }
+    }
+  }
+  for (const id of Object.keys(PROPHET_AYAH)) {
+    for (const a of PROPHET_AYAH[id]) {
+      for (const [lang, text] of [["ar", a.ar], ["en", a.en], ["ur", a.ur]]) {
+        const r = lineNarration({ lang, text });
+        if (r.spoken) keys.add(r.key);
+      }
+    }
+  }
+  return keys;
 }
 
 async function main() {
@@ -186,6 +229,16 @@ async function main() {
     }
     done++;
   }
+  // Prune orphaned clips (e.g. old Roman-Urdu audio replaced by Urdu-script).
+  if (!LIMIT || LIMIT === Infinity) {
+    const valid = validKeySet();
+    let pruned = 0;
+    for (const k of Object.keys(manifest)) {
+      if (!valid.has(k)) { delete manifest[k]; try { fs.unlinkSync(path.join(OUT_DIR, k + ".mp3")); } catch (e) {} pruned++; }
+    }
+    if (pruned) console.log(`Pruned ${pruned} orphaned clips.`);
+  }
+
   fs.writeFileSync(manifestPath, JSON.stringify(manifest));
   console.log(`Done. made=${made} skipped=${skipped} failed=${failed} timingMismatches=${mismatches}`);
   console.log(`Manifest: ${manifestPath} (${Object.keys(manifest).length} clips)`);

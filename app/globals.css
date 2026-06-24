@@ -31,7 +31,27 @@ html, body { margin: 0; padding: 0; background: #0c0820; }
 .ipj-scene-wrap { animation: ipjKenBurns 34s ease-in-out infinite; will-change: transform; }
 .ipj-scene-layer { animation: ipjSceneIn .9s ease both; }
 
+/* The narration card drifts gently so it never feels pinned to one edge. */
+@keyframes ipjCardFloat { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-9px) } }
+.ipj-card-float { animation: ipjCardFloat 6s ease-in-out infinite; }
+
+/* The journey rope: golden light flowing down the connected path of prophets. */
+@keyframes ipjRopeFlow { 0% { background-position: 0 0 } 100% { background-position: 0 30px } }
+.ipj-rope { background-image: repeating-linear-gradient(180deg, rgba(245,196,81,.85) 0 7px, rgba(245,196,81,.08) 7px 30px); animation: ipjRopeFlow 1.3s linear infinite; }
+
 .ipj-scroll::-webkit-scrollbar { width: 0; height: 0 }
+.ipj-scroll { -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+
+/* Small-phone polish: keep everything legible and uncramped on ~360px screens. */
+@media (max-width: 380px) {
+  .ipj-stage-top { gap: 6px !important; padding: 10px 9px !important; }
+  .ipj-round { width: 38px !important; height: 38px !important; font-size: 16px !important; }
+  .ipj-choice { padding: 12px 13px !important; font-size: 15px !important; }
+}
+/* Respect users who prefer reduced motion at the OS level. */
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: .001ms !important; animation-iteration-count: 1 !important; }
+}
 
 /* Hover behaviours ported from the prototype's `style-hover` attributes */
 .ipj-traveler { transition: transform .15s, background .2s; }

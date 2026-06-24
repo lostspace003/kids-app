@@ -84,6 +84,40 @@ export function rewardText({ name, lang, prophetName, honor, lesson }) {
     : `MashaAllah! You journeyed with ${prophetName} ${honor} and learned about ${lesson}. The next land is now open.`;
 }
 
+// ---------------------------------------------------------------------------
+// Urdu-script narration. The Urdu voice (ur-PK) only sounds right when given
+// proper Urdu (Nastaʿlīq) script, so for Urdu audio we synthesise from the
+// Urdu-script content (PROPHET_UR_SCRIPT) while the screen keeps Roman text.
+// ---------------------------------------------------------------------------
+export const NAME_UR = { Hamza: "حمزہ", Huzaifa: "حذیفہ" };
+export const HONOR_UR = { "(AS)": "علیہ السلام", "ﷺ": "صلی اللہ علیہ وسلم" };
+
+export function storytellerWrapScript({ sub, nameUr, panelsLen, panel, decGood, modGood }) {
+  let prefix = "", suffix = "";
+  if (sub === "story") {
+    const N = panelsLen, p = panel;
+    if (p === 0) prefix = `پاس آؤ، ${nameUr} بیٹا، اور دھیان سے سنو۔ `;
+    else if (p === Math.floor(N / 2)) prefix = `اب ${nameUr}، ذرا آنکھیں بند کر کے یہ منظر سوچو۔ `;
+    else if (p === N - 1) suffix = ` اِسے اپنے دل میں بسا لینا، ${nameUr}۔`;
+  } else if (sub === "decision") {
+    prefix = `اب ${nameUr}، کہانی آپ کی طرف مڑتی ہے۔ `;
+  } else if (sub === "dres") {
+    prefix = decGood ? `واہ، ماشاءاللہ، ${nameUr}! ` : `ہمم، آؤ مل کر سوچتے ہیں، ${nameUr}۔ `;
+  } else if (sub === "modern") {
+    prefix = `اور ${nameUr}، یہی سبق آج آپ کی دنیا میں۔ `;
+  } else if (sub === "mres") {
+    prefix = modGood ? `بہت خوب، ${nameUr}، شاباش! ` : `آؤ ذرا غور کریں، ${nameUr}۔ `;
+  }
+  return { prefix, suffix };
+}
+
+export function arriveTextScript({ nameUr, prophetNameUr, honorUr, arrive }) {
+  return `بسم اللہ، ${nameUr} بیٹا۔ اپنی لالٹین تھام لو۔ آج ہم دونوں مل کر ${prophetNameUr} ${honorUr} کے زمانے کا سفر کرتے ہیں۔ ${arrive}`;
+}
+export function rewardTextScript({ nameUr, prophetNameUr, honorUr, lesson }) {
+  return `ماشاءاللہ! آپ نے ${prophetNameUr} ${honorUr} کے ساتھ سفر کیا اور ${lesson} سیکھا۔ اگلی منزل اب کھل گئی ہے۔`;
+}
+
 // Assemble the final spoken string for a beat, plus the char-range -> display
 // token map used for word highlighting. `prefix`/`suffix` tokens carry di = -1
 // (spoken but not shown), body tokens carry their display index.
@@ -109,11 +143,34 @@ export function assembleSpoken({ prefix, body, suffix }) {
 // Resolve the body text + storyteller wrap for a beat, given the prophet's
 // English record `d`, optional Urdu record `u`, language and traveller name.
 // Returns { display, spoken, map, key } — `key` is the audio filename stem.
-export function narrationForBeat({ d, u, lang, name, sub, panel = 0, picked = null }) {
-  const L = lang === "ur";
-  const C = (L && u) ? u : d;
-  const dec = (u && u.decision) || d.decision;
-  const mod = (u && u.modern) || d.modern;
+export function narrationForBeat({ d, u, us, lang, name, sub, panel = 0, picked = null }) {
+  if (lang === "ur") {
+    // Spoken text comes from the Urdu-script content; the screen still shows Roman.
+    const C = us || u || d;
+    const dec = (us && us.decision) || (u && u.decision) || d.decision;
+    const mod = (us && us.modern) || (u && u.modern) || d.modern;
+    const nameUr = NAME_UR[name] || name;
+    const honorUr = HONOR_UR[d.honor] || "";
+    const prophetNameUr = d.ar || d.name;
+    let body = "";
+    if (sub === "arrive") body = arriveTextScript({ nameUr, prophetNameUr, honorUr, arrive: C.arrive });
+    else if (sub === "story") body = C.panels[panel];
+    else if (sub === "decision") body = dec.q;
+    else if (sub === "dres") body = dec[picked].r;
+    else if (sub === "modern") body = mod.q;
+    else if (sub === "mres") body = mod[picked].r;
+    else if (sub === "reward") body = rewardTextScript({ nameUr, prophetNameUr, honorUr, lesson: (C.lesson || d.lesson) });
+    const { prefix, suffix } = storytellerWrapScript({
+      sub, nameUr, panelsLen: (C.panels || d.panels).length, panel,
+      decGood: picked === d.decision.good, modGood: picked === d.modern.good,
+    });
+    const { spoken, map } = assembleSpoken({ prefix, body, suffix });
+    return { display: body, spoken, map, key: hashKey("ur|" + spoken) };
+  }
+
+  // English.
+  const C = d;
+  const dec = d.decision, mod = d.modern;
   let body = "";
   if (sub === "arrive") body = arriveText({ name, lang, prophetName: d.name, honor: d.honor, arrive: C.arrive });
   else if (sub === "story") body = C.panels[panel];
@@ -132,6 +189,14 @@ export function narrationForBeat({ d, u, lang, name, sub, panel = 0, picked = nu
   const { spoken, map } = assembleSpoken({ prefix, body, suffix });
   const key = hashKey(lang + "|" + spoken);
   return { display: body, spoken, map, key };
+}
+
+// A standalone narrated line (no storyteller wrap) — used for ayah recitation
+// meanings and the spoken Arabic. `lang` is "ar" | "en" | "ur" and picks both
+// the hash namespace and (in the generator) the voice.
+export function lineNarration({ lang, text }) {
+  const { spoken, map } = assembleSpoken({ prefix: "", body: text, suffix: "" });
+  return { spoken, map, key: hashKey(lang + "|" + spoken) };
 }
 
 // Enumerate every narratable beat for a prophet (used by the generator and to
