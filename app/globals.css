@@ -46,6 +46,10 @@ html, body { margin: 0; padding: 0; background: #0c0820; }
 @keyframes ipjRopeFlow { 0% { background-position: 0 0 } 100% { background-position: 0 30px } }
 .ipj-rope { background-image: repeating-linear-gradient(180deg, rgba(245,196,81,.85) 0 7px, rgba(245,196,81,.08) 7px 30px); animation: ipjRopeFlow 1.3s linear infinite; }
 
+/* Profile processing spinner. */
+@keyframes ipjSpin { to { transform: rotate(360deg) } }
+.ipj-spin { animation: ipjSpin 1s linear infinite; }
+
 .ipj-scroll::-webkit-scrollbar { width: 0; height: 0 }
 .ipj-scroll { -webkit-overflow-scrolling: touch; scrollbar-width: none; }
 

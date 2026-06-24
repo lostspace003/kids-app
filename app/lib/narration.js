@@ -50,38 +50,50 @@ export function hashKey(str) {
   return ("0000000" + h.toString(16)).slice(-8);
 }
 
-// The storyteller's warm, name-personalised wrapper around each beat.
-// Mirrors the on-screen experience exactly (kept here so audio matches).
-export function storytellerWrap({ sub, name, lang, panelsLen, panel, decGood, modGood }) {
+// Affectionate, gender-based term of endearment used INSTEAD of a personal
+// name — so narration is fully static (only two variants, boy/girl) and never
+// needs per-user audio. Warm "beta/beti" works in both English and Roman Urdu.
+export function termFor(gender, script = false) {
+  if (script) return gender === "girl" ? "بیٹی" : "بیٹا";
+  return gender === "girl" ? "beti" : "beta";
+}
+
+// The storyteller's warm wrapper around each beat. Mirrors the on-screen
+// experience exactly (kept here so the pre-generated audio matches). Kept
+// kid-friendly with words like suno / accha / shabash rather than formal tone.
+export function storytellerWrap({ sub, gender, lang, panelsLen, panel, decGood, modGood }) {
   const L = lang === "ur";
+  const t = termFor(gender);
   let prefix = "", suffix = "";
   if (sub === "story") {
     const N = panelsLen, p = panel;
-    if (p === 0) prefix = L ? `Paas aao, ${name} beta, aur dhyan se suno. ` : `Come closer, ${name}, and listen with your heart. `;
-    else if (p === Math.floor(N / 2)) prefix = L ? `Ab ${name}, zara aankhein band karke ye manzar socho. ` : `Now ${name}, close your eyes for a moment and picture this. `;
-    else if (p === N - 1) suffix = L ? ` Ise apne dil mein basa lena, ${name}.` : ` Hold that in your heart, ${name}.`;
+    if (p === 0) prefix = L ? `Paas aao, ${t}, aur dhyan se suno. ` : `Come closer, ${t}, and listen with your heart. `;
+    else if (p === Math.floor(N / 2)) prefix = L ? `Ab suno ${t}, zara aankhein band karke ye manzar socho. ` : `Now ${t}, close your eyes for a moment and picture this. `;
+    else if (p === N - 1) suffix = L ? ` Ise apne dil mein basa lena, ${t}.` : ` Hold that in your heart, ${t}.`;
   } else if (sub === "decision") {
-    prefix = L ? `Ab ${name}, kahani aap ki taraf mudti hai. ` : `Now, ${name}, the story turns to you. `;
+    prefix = L ? `Ab ${t}, kahani aap ki taraf mudti hai. ` : `Now, ${t}, the story turns to you. `;
   } else if (sub === "dres") {
-    prefix = decGood ? (L ? `Wah, MashaAllah, ${name}! ` : `Oh, MashaAllah, ${name}! `) : (L ? `Hmm, aao mil kar sochte hain, ${name}. ` : `Mmm, let us think about this together, ${name}. `);
+    prefix = decGood ? (L ? `Wah, MashaAllah, ${t}! ` : `Oh, MashaAllah, ${t}! `) : (L ? `Accha ${t}, aao mil kar sochte hain. ` : `Mmm, let us think about this together, ${t}. `);
   } else if (sub === "modern") {
-    prefix = L ? `Aur ${name}, yehi sabaq aaj aap ki duniya mein. ` : `And here, ${name}, is that same lesson, alive in your world today. `;
+    prefix = L ? `Aur suno ${t}, yehi sabaq aaj aap ki duniya mein. ` : `And here, ${t}, is that same lesson, alive in your world today. `;
   } else if (sub === "mres") {
-    prefix = modGood ? (L ? `Bohat khoob, ${name}, shabash! ` : `Beautiful, ${name}, beautiful! `) : (L ? `Aao zara ghaur karein, ${name}. ` : `Let us gently reflect, ${name}. `);
+    prefix = modGood ? (L ? `Bohat khoob, ${t}, shabash! ` : `Beautiful, ${t}, beautiful! `) : (L ? `Accha ${t}, aao zara ghaur karein. ` : `Let us gently reflect, ${t}. `);
   }
   return { prefix, suffix };
 }
 
-export function arriveText({ name, lang, prophetName, honor, arrive }) {
+export function arriveText({ gender, lang, prophetName, honor, arrive }) {
+  const t = termFor(gender);
   return lang === "ur"
-    ? `Bismillah, ${name} beta. Apni lantern thaam lo — aaj hum dono mil kar ${prophetName} ${honor} ke zamane ka safar karte hain. ${arrive}`
-    : `Bismillah, ${name}. Take your lantern in hand — tonight, you and I travel together to the time of ${prophetName} ${honor}. ${arrive}`;
+    ? `Bismillah, ${t}. Apni lantern thaam lo — aaj hum dono mil kar ${prophetName} ${honor} ke zamane ka safar karte hain. ${arrive}`
+    : `Bismillah, ${t}. Take your lantern in hand — tonight, you and I travel together to the time of ${prophetName} ${honor}. ${arrive}`;
 }
 
-export function rewardText({ name, lang, prophetName, honor, lesson }) {
+export function rewardText({ gender, lang, prophetName, honor, lesson }) {
+  const t = termFor(gender);
   return lang === "ur"
-    ? `MashaAllah! Aap ne ${prophetName} ${honor} ke saath safar kiya aur ${lesson} seekha. Agli manzil ab khul gayi hai.`
-    : `MashaAllah! You journeyed with ${prophetName} ${honor} and learned about ${lesson}. The next land is now open.`;
+    ? `MashaAllah, ${t}! Aap ne ${prophetName} ${honor} ke saath safar kiya aur ${lesson} seekha. Agli manzil ab khul gayi hai.`
+    : `MashaAllah, ${t}! You journeyed with ${prophetName} ${honor} and learned about ${lesson}. The next land is now open.`;
 }
 
 // ---------------------------------------------------------------------------
@@ -92,30 +104,33 @@ export function rewardText({ name, lang, prophetName, honor, lesson }) {
 export const NAME_UR = { Hamza: "حمزہ", Huzaifa: "حذیفہ" };
 export const HONOR_UR = { "(AS)": "علیہ السلام", "ﷺ": "صلی اللہ علیہ وسلم" };
 
-export function storytellerWrapScript({ sub, nameUr, panelsLen, panel, decGood, modGood }) {
+export function storytellerWrapScript({ sub, gender, panelsLen, panel, decGood, modGood }) {
+  const t = termFor(gender, true);
   let prefix = "", suffix = "";
   if (sub === "story") {
     const N = panelsLen, p = panel;
-    if (p === 0) prefix = `پاس آؤ، ${nameUr} بیٹا، اور دھیان سے سنو۔ `;
-    else if (p === Math.floor(N / 2)) prefix = `اب ${nameUr}، ذرا آنکھیں بند کر کے یہ منظر سوچو۔ `;
-    else if (p === N - 1) suffix = ` اِسے اپنے دل میں بسا لینا، ${nameUr}۔`;
+    if (p === 0) prefix = `پاس آؤ، ${t}، اور دھیان سے سنو۔ `;
+    else if (p === Math.floor(N / 2)) prefix = `اب سنو ${t}، ذرا آنکھیں بند کر کے یہ منظر سوچو۔ `;
+    else if (p === N - 1) suffix = ` اِسے اپنے دل میں بسا لینا، ${t}۔`;
   } else if (sub === "decision") {
-    prefix = `اب ${nameUr}، کہانی آپ کی طرف مڑتی ہے۔ `;
+    prefix = `اب ${t}، کہانی آپ کی طرف مڑتی ہے۔ `;
   } else if (sub === "dres") {
-    prefix = decGood ? `واہ، ماشاءاللہ، ${nameUr}! ` : `ہمم، آؤ مل کر سوچتے ہیں، ${nameUr}۔ `;
+    prefix = decGood ? `واہ، ماشاءاللہ، ${t}! ` : `اچھا ${t}، آؤ مل کر سوچتے ہیں۔ `;
   } else if (sub === "modern") {
-    prefix = `اور ${nameUr}، یہی سبق آج آپ کی دنیا میں۔ `;
+    prefix = `اور سنو ${t}، یہی سبق آج آپ کی دنیا میں۔ `;
   } else if (sub === "mres") {
-    prefix = modGood ? `بہت خوب، ${nameUr}، شاباش! ` : `آؤ ذرا غور کریں، ${nameUr}۔ `;
+    prefix = modGood ? `بہت خوب، ${t}، شاباش! ` : `اچھا ${t}، آؤ ذرا غور کریں۔ `;
   }
   return { prefix, suffix };
 }
 
-export function arriveTextScript({ nameUr, prophetNameUr, honorUr, arrive }) {
-  return `بسم اللہ، ${nameUr} بیٹا۔ اپنی لالٹین تھام لو۔ آج ہم دونوں مل کر ${prophetNameUr} ${honorUr} کے زمانے کا سفر کرتے ہیں۔ ${arrive}`;
+export function arriveTextScript({ gender, prophetNameUr, honorUr, arrive }) {
+  const t = termFor(gender, true);
+  return `بسم اللہ، ${t}۔ اپنی لالٹین تھام لو۔ آج ہم دونوں مل کر ${prophetNameUr} ${honorUr} کے زمانے کا سفر کرتے ہیں۔ ${arrive}`;
 }
-export function rewardTextScript({ nameUr, prophetNameUr, honorUr, lesson }) {
-  return `ماشاءاللہ! آپ نے ${prophetNameUr} ${honorUr} کے ساتھ سفر کیا اور ${lesson} سیکھا۔ اگلی منزل اب کھل گئی ہے۔`;
+export function rewardTextScript({ gender, prophetNameUr, honorUr, lesson }) {
+  const t = termFor(gender, true);
+  return `ماشاءاللہ، ${t}! آپ نے ${prophetNameUr} ${honorUr} کے ساتھ سفر کیا اور ${lesson} سیکھا۔ اگلی منزل اب کھل گئی ہے۔`;
 }
 
 // Assemble the final spoken string for a beat, plus the char-range -> display
@@ -143,25 +158,24 @@ export function assembleSpoken({ prefix, body, suffix }) {
 // Resolve the body text + storyteller wrap for a beat, given the prophet's
 // English record `d`, optional Urdu record `u`, language and traveller name.
 // Returns { display, spoken, map, key } — `key` is the audio filename stem.
-export function narrationForBeat({ d, u, us, lang, name, sub, panel = 0, picked = null }) {
+export function narrationForBeat({ d, u, us, lang, gender, sub, panel = 0, picked = null }) {
   if (lang === "ur") {
     // Spoken text comes from the Urdu-script content; the screen still shows Roman.
     const C = us || u || d;
     const dec = (us && us.decision) || (u && u.decision) || d.decision;
     const mod = (us && us.modern) || (u && u.modern) || d.modern;
-    const nameUr = NAME_UR[name] || name;
     const honorUr = HONOR_UR[d.honor] || "";
     const prophetNameUr = d.ar || d.name;
     let body = "";
-    if (sub === "arrive") body = arriveTextScript({ nameUr, prophetNameUr, honorUr, arrive: C.arrive });
+    if (sub === "arrive") body = arriveTextScript({ gender, prophetNameUr, honorUr, arrive: C.arrive });
     else if (sub === "story") body = C.panels[panel];
     else if (sub === "decision") body = dec.q;
     else if (sub === "dres") body = dec[picked].r;
     else if (sub === "modern") body = mod.q;
     else if (sub === "mres") body = mod[picked].r;
-    else if (sub === "reward") body = rewardTextScript({ nameUr, prophetNameUr, honorUr, lesson: (C.lesson || d.lesson) });
+    else if (sub === "reward") body = rewardTextScript({ gender, prophetNameUr, honorUr, lesson: (C.lesson || d.lesson) });
     const { prefix, suffix } = storytellerWrapScript({
-      sub, nameUr, panelsLen: (C.panels || d.panels).length, panel,
+      sub, gender, panelsLen: (C.panels || d.panels).length, panel,
       decGood: picked === d.decision.good, modGood: picked === d.modern.good,
     });
     const { spoken, map } = assembleSpoken({ prefix, body, suffix });
@@ -172,16 +186,16 @@ export function narrationForBeat({ d, u, us, lang, name, sub, panel = 0, picked 
   const C = d;
   const dec = d.decision, mod = d.modern;
   let body = "";
-  if (sub === "arrive") body = arriveText({ name, lang, prophetName: d.name, honor: d.honor, arrive: C.arrive });
+  if (sub === "arrive") body = arriveText({ gender, lang, prophetName: d.name, honor: d.honor, arrive: C.arrive });
   else if (sub === "story") body = C.panels[panel];
   else if (sub === "decision") body = dec.q;
   else if (sub === "dres") body = dec[picked].r;
   else if (sub === "modern") body = mod.q;
   else if (sub === "mres") body = mod[picked].r;
-  else if (sub === "reward") body = rewardText({ name, lang, prophetName: d.name, honor: d.honor, lesson: (C.lesson || d.lesson) });
+  else if (sub === "reward") body = rewardText({ gender, lang, prophetName: d.name, honor: d.honor, lesson: (C.lesson || d.lesson) });
 
   const { prefix, suffix } = storytellerWrap({
-    sub, name, lang,
+    sub, gender, lang,
     panelsLen: (C.panels || d.panels).length, panel,
     decGood: picked === d.decision.good,
     modGood: picked === d.modern.good,
@@ -213,5 +227,6 @@ export function enumerateBeats(d, u) {
   return beats;
 }
 
-// Traveller display names, shared so the generator personalises identically.
-export const TRAVELLER_NAMES = ["Hamza", "Huzaifa"];
+// Narration is now gendered, not name-personalised: there are exactly two
+// audio variants. The generator (Phase 6) renders each beat once per gender.
+export const GENDERS = ["boy", "girl"];

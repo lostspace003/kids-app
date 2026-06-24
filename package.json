@@ -12,12 +12,16 @@
     "gen:audio": "node scripts/generate-audio.mjs"
   },
   "dependencies": {
+    "@azure/communication-email": "^1.0.0",
+    "@azure/storage-blob": "^12.26.0",
+    "mssql": "^11.0.1",
     "next": "^15.1.6",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "react-easy-crop": "^5.4.1",
+    "sharp": "^0.35.2"
   },
   "devDependencies": {
-    "microsoft-cognitiveservices-speech-sdk": "^1.43.1",
-    "sharp": "^0.35.2"
+    "microsoft-cognitiveservices-speech-sdk": "^1.43.1"
   }
 }

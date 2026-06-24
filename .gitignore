@@ -20,8 +20,17 @@ yarn-error.log*
 # env files
 .env*.local
 
+# local dev data store + blobs + email outbox (Azure-backed in production)
+/.localdata
+
+# local test images (not part of the app)
+/h3.jpeg
+/h3_ghibli.png
+/h3_ghibli.webp
+
 # audio generation log (the mp3s + manifest.json ARE committed)
 /public/audio/_genlog.txt
 
 # typescript / next
 next-env.d.ts
+.vercel

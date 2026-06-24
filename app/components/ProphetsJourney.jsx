@@ -88,10 +88,27 @@ export default class ProphetsJourney extends React.Component {
     this.manifest = null;          // pre-generated Azure audio index (loaded on mount)
     this.audioEl = null; this._raf = 0; this._ac = null;
     let lang0 = "ur"; try { const sv = localStorage.getItem("ipj_lang_v2"); if (sv) lang0 = sv; } catch (e) {}
+    let vol0 = 1; try { const sv = localStorage.getItem("ipj_volume"); if (sv != null) vol0 = Math.min(2, Math.max(0, parseFloat(sv))); } catch (e) {}
+
+    // When a logged-in child profile is supplied, the traveller IS that child:
+    // inject a synthetic "me" profile (their Ghibli avatar as the medallion) and
+    // skip the old welcome + traveller picker, going straight to the map.
+    const cp = props.childProfile || null;
+    if (cp) {
+      PROFILES.me = {
+        name: cp.childName || "Traveller",
+        sub: "",
+        initial: (cp.childName || "?").trim().charAt(0).toUpperCase() || "?",
+        pic: cp.avatarUrl || cp.photoUrl || "/hamza.webp",
+        grad: cp.gender === "girl" ? "linear-gradient(135deg,#ffb3d1,#f56fa1)" : "linear-gradient(135deg,#ffd56b,#f59442)",
+        gender: cp.gender === "girl" ? "girl" : "boy",
+      };
+    }
+
     this.state = {
-      screen: "welcome", profile: null, sub: "arrive", curId: null, panel: 0,
+      screen: cp ? "map" : "welcome", profile: cp ? "me" : null, sub: "arrive", curId: null, panel: 0,
       pickedDec: null, pickedMod: null, goodCount: 0, earned: 0,
-      muted: false, activeWord: -1, lang: lang0,
+      muted: false, volume: vol0, activeWord: -1, lang: lang0,
       quiz: null, quizPick: null, quizIdx: 0,   // mini-quiz recap state
       ayahIdx: 0,                                // which Qur'anic verse is showing
       starsEarned: 0, leveledTo: null,   // reward-screen celebration
@@ -107,6 +124,20 @@ export default class ProphetsJourney extends React.Component {
     if (typeof fetch !== "undefined") {
       fetch(asset("/audio/manifest.json")).then((r) => (r.ok ? r.json() : null)).then((m) => { this.manifest = m || {}; }).catch(() => { this.manifest = {}; });
     }
+    // For a logged-in child, progress lives server-side (per account).
+    if (this.props.childProfile) this.loadServerProgress();
+  }
+
+  // Pull this account's saved progress from the server, apply the day-streak,
+  // and persist it back. Falls back silently to the in-memory default.
+  loadServerProgress() {
+    fetch("/api/progress").then((r) => (r.ok ? r.json() : null)).then((d) => {
+      const base = { completed: [], noor: 0, stars: {}, earned: {}, streak: 0, lastDay: null };
+      const prog = this.applyStreak({ ...base, ...((d && d.ok && d.progress) || {}) });
+      if (!prog.stars) prog.stars = {};
+      if (!prog.earned) prog.earned = {};
+      this.setState({ progress: prog }, () => this.saveProgress());
+    }).catch(() => {});
   }
   componentWillUnmount() { this.stopAudio(); if (this.synth) this.synth.cancel(); }
   componentDidUpdate() {
@@ -133,7 +164,15 @@ export default class ProphetsJourney extends React.Component {
     if (!r.earned) r.earned = {};
     return r;
   }
-  saveProgress() { try { localStorage.setItem(this.pkey(this.state.profile), JSON.stringify(this.state.progress)); } catch (e) {} }
+  saveProgress() {
+    try { localStorage.setItem(this.pkey(this.state.profile), JSON.stringify(this.state.progress)); } catch (e) {}
+    // Mirror to the server for logged-in children so progress follows the account.
+    if (this.props.childProfile) {
+      try {
+        fetch("/api/progress", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ progress: this.state.progress }) });
+      } catch (e) {}
+    }
+  }
   // Reset everything for the current traveller (re-locks all but the first land).
   resetAll() {
     if (typeof window !== "undefined" && !window.confirm(this.state.lang === "ur" ? "Saara safar reset karein? Tamam manzilein dobara band ho jayengi." : "Reset the whole journey? All lands will lock again.")) return;
@@ -169,7 +208,13 @@ export default class ProphetsJourney extends React.Component {
     const prog = this.applyStreak(this.loadProgress(p));
     this.setState({ profile: p, progress: prog, screen: "map" }, () => this.saveProgress());
   }
-  goProfile() { if (this.synth) this.synth.cancel(); this.setState({ screen: "profile", profile: null }); }
+  goProfile() {
+    // Logged-in children are bound to their account — never show the old
+    // built-in traveller picker. (Account actions live in the hamburger menu.)
+    if (this.props.childProfile) return;
+    if (this.synth) this.synth.cancel();
+    this.setState({ screen: "profile", profile: null });
+  }
   startApp() { this.primeSpeech(); this.sfx("open"); this.setState({ screen: "profile" }); }
   openProphet(id) { const i = this.data().findIndex((d) => d.id === id); if (!this.isUnlocked(i)) return; this.primeSpeech(); this.sfx("open"); this.setState({ screen: "stage", curId: id, sub: "arrive", panel: 0, pickedDec: null, pickedMod: null, goodCount: 0, earned: 0, activeWord: -1, quiz: null, quizPick: null, quizIdx: 0, ayahIdx: 0, starsEarned: 0, leveledTo: null }); }
   backToMap() { this.stopAudio(); if (this.synth) this.synth.cancel(); this.setState({ screen: "map" }); }
@@ -229,11 +274,34 @@ export default class ProphetsJourney extends React.Component {
       prog.stars[d.id] = Math.max(prog.stars[d.id] || 0, stars);
       const after = levelFor(prog.noor).idx;
       return { sub: "reward", earned, starsEarned: stars, leveledTo: after > before ? levelFor(prog.noor) : null, progress: prog, celebrate: st.celebrate + 1, activeWord: -1 };
-    }, () => { this.saveProgress(); this.sfx("reward"); });
+    }, () => { this.saveProgress(); this.sfx("reward"); if (this.props.onStageComplete) this.props.onStageComplete(d.id, stars); });
   }
 
   // ---------- SOUND FX (WebAudio, no assets needed) ----------
   audioCtx() { if (this._ac) return this._ac; try { this._ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { this._ac = null; } return this._ac; }
+  // Shared gain node for narration playback. Its gain can exceed 1.0, so the
+  // volume slider can boost narration up to 2x — louder than the source file.
+  mediaGain() {
+    const ac = this.audioCtx(); if (!ac) return null;
+    if (!this._mediaGain) { this._mediaGain = ac.createGain(); this._mediaGain.gain.value = this.state.volume; this._mediaGain.connect(ac.destination); }
+    return this._mediaGain;
+  }
+  // Route an <audio> element through the gain node. An element can only be
+  // sourced once; we always create fresh elements, so this is safe.
+  routeThroughGain(audio) {
+    try {
+      const ac = this.audioCtx(); const g = this.mediaGain();
+      if (!ac || !g) return;
+      if (ac.state === "suspended") ac.resume();
+      ac.createMediaElementSource(audio).connect(g);
+    } catch (e) {}
+  }
+  setVolume(v) {
+    const vol = Math.min(2, Math.max(0, Number(v) || 0));
+    this.setState({ volume: vol });
+    if (this._mediaGain) { try { this._mediaGain.gain.value = vol; } catch (e) {} }
+    try { localStorage.setItem("ipj_volume", String(vol)); } catch (e) {}
+  }
   tone(freq, t0, dur, type = "sine", gain = 0.12) {
     const ac = this.audioCtx(); if (!ac) return;
     const o = ac.createOscillator(), g = ac.createGain();
@@ -269,13 +337,19 @@ export default class ProphetsJourney extends React.Component {
     return en.find((v) => /natural|google|samantha|aria|jenny|libby|sonia|karen|moira/i.test(v.name)) || en.find((v) => /female|woman/i.test(v.name)) || en[0] || vs[0];
   }
   wordAt(ci) { let found = -1; for (const m of this._spkMap) { if (ci >= m.s) found = m.di; if (ci >= m.s && ci < m.e) { found = m.di; break; } } return found; }
-  myName() { return this.state.profile ? PROFILES[this.state.profile].name : "friend"; }
+  myName() { return this.state.profile && PROFILES[this.state.profile] ? PROFILES[this.state.profile].name : "friend"; }
+  // Narration is gendered (beta/beti), never name-personalised — so the audio
+  // is fully static (two variants). Falls back to "boy" wording if unknown.
+  myGender() {
+    const p = this.state.profile && PROFILES[this.state.profile];
+    return p && p.gender === "girl" ? "girl" : "boy";
+  }
   storytellerWrap() {
     const d = this.curData(); if (!d) return { prefix: "", suffix: "" };
     const L = this.state.lang === "ur";
     const C = (L && PROPHET_UR && PROPHET_UR[d.id]) || d;
     return _wrap({
-      sub: this.state.sub, name: this.myName(), lang: this.state.lang,
+      sub: this.state.sub, gender: this.myGender(), lang: this.state.lang,
       panelsLen: (C.panels || d.panels).length, panel: this.state.panel,
       decGood: this.state.pickedDec === d.decision.good,
       modGood: this.state.pickedMod === d.modern.good,
@@ -306,6 +380,7 @@ export default class ProphetsJourney extends React.Component {
     this.stopAudio();
     const audio = new Audio(asset("/audio/" + key + ".mp3"));
     this.audioEl = audio;
+    this.routeThroughGain(audio);
     // For Urdu the on-screen Roman words don't match the Urdu-script audio
     // tokens, so sweep the highlight evenly across the clip instead.
     let w = meta.w || [];
@@ -333,7 +408,7 @@ export default class ProphetsJourney extends React.Component {
     this._spkMap = map || [];
     const u = new SpeechSynthesisUtterance(spoken);
     const v = this.pickVoice(); if (v) u.voice = v;
-    u.rate = this.props.voiceRate || 0.88; u.pitch = 1.06; u.lang = v ? v.lang : (this.state.lang === "ur" ? "hi-IN" : "en-US");
+    u.rate = this.props.voiceRate || 0.88; u.pitch = 1.06; u.volume = Math.min(1, this.state.volume); u.lang = v ? v.lang : (this.state.lang === "ur" ? "hi-IN" : "en-US");
     u.onboundary = (e) => { if (e.charIndex == null) return; const wi = this.wordAt(e.charIndex); if (wi !== this.state.activeWord) this.setState({ activeWord: wi }); };
     u.onend = () => { this.setState({ activeWord: -1 }); };
     try { this.synth.speak(u); } catch (e) {}
@@ -343,7 +418,7 @@ export default class ProphetsJourney extends React.Component {
   playAyah() {
     const a = this.ayahList()[this.state.ayahIdx]; if (!a) return;
     this.stopAudio();
-    const rec = new Audio(asset(a.audio)); this.audioEl = rec;
+    const rec = new Audio(asset(a.audio)); this.audioEl = rec; this.routeThroughGain(rec);
     rec.onended = () => { if (this.audioEl === rec) { this.audioEl = null; this.narrateAyahMeaning(); } };
     rec.play().catch(() => { if (this.audioEl === rec) this.audioEl = null; this.narrateAyahMeaning(); });
   }
@@ -354,7 +429,7 @@ export default class ProphetsJourney extends React.Component {
     this._lastSpoken = r.spoken; this._lastMap = r.map;
     if (!this.playStatic(r.key)) this.speakWeb(r.spoken, r.map);
   }
-  repeatRecitation() { const a = this.ayahList()[this.state.ayahIdx]; if (!a) return; this.stopAudio(); const rec = new Audio(asset(a.audio)); this.audioEl = rec; rec.play().catch(() => {}); }
+  repeatRecitation() { const a = this.ayahList()[this.state.ayahIdx]; if (!a) return; this.stopAudio(); const rec = new Audio(asset(a.audio)); this.audioEl = rec; this.routeThroughGain(rec); rec.play().catch(() => {}); }
   playArabicVoice() { const a = this.ayahList()[this.state.ayahIdx]; if (!a) return; const r = lineNarration({ lang: "ar", text: a.ar }); this.playStatic(r.key); }
 
   narrateCurrent() {
@@ -368,7 +443,7 @@ export default class ProphetsJourney extends React.Component {
       return;
     }
     const beat = this.currentBeat();
-    const r = narrationForBeat({ d, u: PROPHET_UR[d.id] || null, us: PROPHET_UR_SCRIPT[d.id] || null, lang: this.state.lang, name: this.myName(), sub: beat.sub, panel: beat.panel || 0, picked: beat.picked || null });
+    const r = narrationForBeat({ d, u: PROPHET_UR[d.id] || null, us: PROPHET_UR_SCRIPT[d.id] || null, lang: this.state.lang, gender: this.myGender(), sub: beat.sub, panel: beat.panel || 0, picked: beat.picked || null });
     this._lastSpoken = r.spoken; this._lastMap = r.map;
     const even = this.state.lang === "ur" ? _tokenize(this.buildView().body).length : 0;
     if (!this.playStatic(r.key, even)) this.speakWeb(r.spoken, r.map);
@@ -506,10 +581,10 @@ export default class ProphetsJourney extends React.Component {
     const L = this.state.lang === "ur";
     const U = (L && PROPHET_UR && PROPHET_UR[d.id]) ? PROPHET_UR[d.id] : null;
     const C = U || d; const dec = (U && U.decision) || d.decision; const mod = (U && U.modern) || d.modern;
-    const nm = this.myName();
+    const gen = this.myGender();
     let v;
     if (st === "arrive") {
-      const greet = arriveText({ name: nm, lang: this.state.lang, prophetName: d.name, honor: d.honor, arrive: C.arrive });
+      const greet = arriveText({ gender: gen, lang: this.state.lang, prophetName: d.name, honor: d.honor, arrive: C.arrive });
       v = { key: "arrive", tag: L ? "Pahunche" : "Arrive", icon: "✨", tagColor: "#f5c451", body: greet, primary: { label: L ? "Safar shuru karein ›" : "Begin the journey ›", on: () => this.beginStory() } };
     }
     else if (st === "story") { const last = this.state.panel >= C.panels.length - 1; v = { key: "story" + this.state.panel, tag: (L ? "Kahani · " : "The Story · ") + (this.state.panel + 1) + "/" + C.panels.length, icon: "📖", tagColor: "#9ec5ff", body: C.panels[this.state.panel], primary: { label: last ? (L ? "Aap kya karte? ›" : "What would you do? ›") : (L ? "Aage chalein ›" : "Continue ›"), on: () => this.nextPanel() } }; }
@@ -531,7 +606,7 @@ export default class ProphetsJourney extends React.Component {
       v = { key: "quiz" + this.state.quizIdx, tag: (L ? "Yaad hai? · " : "Remember? · ") + (this.state.quizIdx + 1) + "/" + (items.length || 1), icon: "🧠", tagColor: "#ffb86b", body: q.q,
         quizOpts: q.opts.map((o, i) => ({ letter: String.fromCharCode(65 + i), t: o.t, ok: o.ok, picked: picked === i, revealed: picked != null, onPick: () => this.pickQuiz(i) })) }; }
     else if (st === "reward") { const lesson = (C.lesson || d.lesson), badge = (C.badge || d.badge);
-      const body = rewardText({ name: nm, lang: this.state.lang, prophetName: d.name, honor: d.honor, lesson });
+      const body = rewardText({ gender: gen, lang: this.state.lang, prophetName: d.name, honor: d.honor, lesson });
       v = { key: "reward", tag: L ? "Manzil roshan!" : "Land Lit!", icon: "🎉", tagColor: "#f5c451", body, isReward: true, noorEarned: this.state.earned, stars: this.state.starsEarned, leveledTo: this.state.leveledTo, badge, badgeIcon: d.badgeIcon, primary: { label: L ? "Safar jari rakhein ›" : "Continue your journey ›", on: () => this.backToMap() } }; }
     else v = {};
     if (v.body) v.words = this.words(v.body);
@@ -597,6 +672,7 @@ export default class ProphetsJourney extends React.Component {
       backToMap: () => this.backToMap(),
       cameraStyle, lantern: cur ? this.lantern() : null,
       muteIcon: st.muted ? "🔇" : "🔊", toggleMute: () => this.toggleMute(), replay: () => this.replay(),
+      volume: st.volume, setVolume: (v) => this.setVolume(v),
       langLabel: (st.lang === "ur" ? "EN" : "اردو"), toggleLang: () => this.toggleLang(),
       t: {
         profileSub: (st.lang === "ur" ? "Apni lantern ki roshni mein tamam 25 ambiya ke raaste ka safar karein." : "Travel the path of all 25 prophets — by the light of your lantern."),
@@ -802,6 +878,10 @@ export default class ProphetsJourney extends React.Component {
                 <div style={s("font-family:'Amiri',serif;color:#f5c451;font-size:clamp(14px,3.6vw,20px);text-shadow:0 2px 10px rgba(0,0,0,.7);")}>{V.cur.ar}</div>
               </div>
               <button onClick={V.toggleMute} className="ipj-round" title="Sound" style={s("cursor:pointer;flex:0 0 auto;width:42px;height:42px;border-radius:50%;border:1px solid rgba(255,255,255,.2);background:rgba(10,7,26,.4);color:#f4eede;font-size:18px;backdrop-filter:blur(6px);")}>{V.muteIcon}</button>
+              <div title={`Volume ${V.volume.toFixed(1)}×`} style={s("flex:0 0 auto;display:flex;align-items:center;gap:6px;height:42px;padding:0 12px;border-radius:21px;border:1px solid rgba(255,255,255,.2);background:rgba(10,7,26,.4);backdrop-filter:blur(6px);")}>
+                <input type="range" min="0" max="2" step="0.05" value={V.volume} onChange={(e) => V.setVolume(e.target.value)} aria-label="Volume" style={{ width: 72, accentColor: "#f5c451", cursor: "pointer" }} />
+                <span style={s("font-family:'Fredoka';font-size:12px;color:#f5c451;min-width:30px;text-align:right;")}>{V.volume.toFixed(1)}×</span>
+              </div>
               <button onClick={V.toggleLang} title="Language" style={s("cursor:pointer;flex:0 0 auto;height:42px;padding:0 13px;border-radius:21px;border:1px solid rgba(255,255,255,.2);background:rgba(10,7,26,.4);color:#f4eede;font-family:'Fredoka';font-weight:600;font-size:14px;backdrop-filter:blur(6px);")}>{V.langLabel}</button>
               <button onClick={V.replay} className="ipj-round" title="Replay narration" style={s("cursor:pointer;flex:0 0 auto;width:42px;height:42px;border-radius:50%;border:1px solid rgba(255,255,255,.2);background:rgba(10,7,26,.4);color:#f4eede;font-size:18px;backdrop-filter:blur(6px);")}>↻</button>
             </div>
