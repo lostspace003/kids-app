@@ -35,6 +35,13 @@ html, body { margin: 0; padding: 0; background: #0c0820; }
 @keyframes ipjCardFloat { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-9px) } }
 .ipj-card-float { animation: ipjCardFloat 6s ease-in-out infinite; }
 
+/* Welcome screen: a soft breathing glow on the title + a pulsing play button. */
+@keyframes ipjTitleGlow { 0%,100% { text-shadow: 0 2px 30px rgba(245,196,81,.25) } 50% { text-shadow: 0 2px 46px rgba(245,196,81,.6) } }
+@keyframes ipjPlayPulse { 0%,100% { transform: scale(1); box-shadow: 0 10px 34px rgba(245,184,54,.45) } 50% { transform: scale(1.05); box-shadow: 0 14px 46px rgba(245,184,54,.7) } }
+.ipj-title-glow { animation: ipjTitleGlow 4s ease-in-out infinite; }
+.ipj-play { animation: ipjPlayPulse 2.4s ease-in-out infinite; transition: transform .12s; }
+.ipj-play:hover { transform: scale(1.08) !important; }
+
 /* The journey rope: golden light flowing down the connected path of prophets. */
 @keyframes ipjRopeFlow { 0% { background-position: 0 0 } 100% { background-position: 0 30px } }
 .ipj-rope { background-image: repeating-linear-gradient(180deg, rgba(245,196,81,.85) 0 7px, rgba(245,196,81,.08) 7px 30px); animation: ipjRopeFlow 1.3s linear infinite; }

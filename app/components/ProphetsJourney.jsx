@@ -84,14 +84,14 @@ export default class ProphetsJourney extends React.Component {
     this.audioEl = null; this._raf = 0; this._ac = null;
     let lang0 = "ur"; try { const sv = localStorage.getItem("ipj_lang_v2"); if (sv) lang0 = sv; } catch (e) {}
     this.state = {
-      screen: "profile", profile: null, sub: "arrive", curId: null, panel: 0,
+      screen: "welcome", profile: null, sub: "arrive", curId: null, panel: 0,
       pickedDec: null, pickedMod: null, goodCount: 0, earned: 0,
       muted: false, activeWord: -1, lang: lang0,
       quiz: null, quizPick: null, quizIdx: 0,   // mini-quiz recap state
       ayahIdx: 0,                                // which Qur'anic verse is showing
       starsEarned: 0, leveledTo: null,   // reward-screen celebration
       celebrate: 0,                       // bump to fire confetti
-      progress: { completed: [], noor: 0, stars: {}, streak: 0, lastDay: null },
+      progress: { completed: [], noor: 0, stars: {}, earned: {}, streak: 0, lastDay: null },
     };
   }
 
@@ -117,17 +117,35 @@ export default class ProphetsJourney extends React.Component {
   // ---------- DATA ----------
   data() { return PROPHET_DATA || []; }
   curData() { return this.data().find((d) => d.id === this.state.curId); }
-  isUnlocked(i) { return i <= this.state.progress.completed.length; }
+  isUnlocked(i) { const DATA = this.data(); return i === 0 || this.state.progress.completed.includes(DATA[i - 1].id); }
 
   // ---------- PROGRESS ----------
   pkey(p) { return "ipj_" + p; }
   loadProgress(p) {
-    let r = { completed: [], noor: 0, stars: {}, streak: 0, lastDay: null };
+    let r = { completed: [], noor: 0, stars: {}, earned: {}, streak: 0, lastDay: null };
     try { const raw = localStorage.getItem(this.pkey(p)); if (raw) r = { ...r, ...JSON.parse(raw) }; } catch (e) {}
     if (!r.stars) r.stars = {};
+    if (!r.earned) r.earned = {};
     return r;
   }
   saveProgress() { try { localStorage.setItem(this.pkey(this.state.profile), JSON.stringify(this.state.progress)); } catch (e) {} }
+  // Reset everything for the current traveller (re-locks all but the first land).
+  resetAll() {
+    if (typeof window !== "undefined" && !window.confirm(this.state.lang === "ur" ? "Saara safar reset karein? Tamam manzilein dobara band ho jayengi." : "Reset the whole journey? All lands will lock again.")) return;
+    this.sfx("page");
+    this.setState((st) => ({ progress: { ...st.progress, completed: [], noor: 0, stars: {}, earned: {} } }), () => this.saveProgress());
+  }
+  // Reset a single prophet — clears its stars + Noor and re-locks the next land.
+  resetProphet(id) {
+    if (typeof window !== "undefined" && !window.confirm(this.state.lang === "ur" ? "Is nabi ka safar reset karein?" : "Reset this prophet's progress?")) return;
+    this.sfx("page");
+    this.setState((st) => {
+      const p = { ...st.progress, completed: st.progress.completed.filter((x) => x !== id), stars: { ...st.progress.stars }, earned: { ...(st.progress.earned || {}) } };
+      p.noor = Math.max(0, p.noor - (p.earned[id] || 0));
+      delete p.stars[id]; delete p.earned[id];
+      return { progress: p };
+    }, () => this.saveProgress());
+  }
   // Day-streak: bump if returning the next day, reset if a day was skipped.
   applyStreak(prog) {
     const today = new Date(); const dayNum = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / 86400000) + today.getFullYear() * 366;
@@ -147,6 +165,7 @@ export default class ProphetsJourney extends React.Component {
     this.setState({ profile: p, progress: prog, screen: "map" }, () => this.saveProgress());
   }
   goProfile() { if (this.synth) this.synth.cancel(); this.setState({ screen: "profile", profile: null }); }
+  startApp() { this.primeSpeech(); this.sfx("open"); this.setState({ screen: "profile" }); }
   openProphet(id) { const i = this.data().findIndex((d) => d.id === id); if (!this.isUnlocked(i)) return; this.primeSpeech(); this.sfx("open"); this.setState({ screen: "stage", curId: id, sub: "arrive", panel: 0, pickedDec: null, pickedMod: null, goodCount: 0, earned: 0, activeWord: -1, quiz: null, quizPick: null, quizIdx: 0, ayahIdx: 0, starsEarned: 0, leveledTo: null }); }
   backToMap() { this.stopAudio(); if (this.synth) this.synth.cancel(); this.setState({ screen: "map" }); }
   beginStory() { this.sfx("page"); this.setState({ sub: "story", panel: 0, activeWord: -1 }); }
@@ -199,9 +218,9 @@ export default class ProphetsJourney extends React.Component {
     const stars = Math.max(1, Math.min(3, this.state.goodCount));   // 1–3 lanterns
     const earned = 10 + this.state.goodCount * 5;
     this.setState((st) => {
-      const prog = { ...st.progress, completed: [...st.progress.completed], stars: { ...(st.progress.stars || {}) } };
+      const prog = { ...st.progress, completed: [...st.progress.completed], stars: { ...(st.progress.stars || {}) }, earned: { ...(st.progress.earned || {}) } };
       const before = levelFor(prog.noor).idx;
-      if (!prog.completed.includes(d.id)) { prog.completed.push(d.id); prog.noor += earned; }
+      if (!prog.completed.includes(d.id)) { prog.completed.push(d.id); prog.noor += earned; prog.earned[d.id] = earned; }
       prog.stars[d.id] = Math.max(prog.stars[d.id] || 0, stars);
       const after = levelFor(prog.noor).idx;
       return { sub: "reward", earned, starsEarned: stars, leveledTo: after > before ? levelFor(prog.noor) : null, progress: prog, celebrate: st.celebrate + 1, activeWord: -1 };
@@ -532,12 +551,11 @@ export default class ProphetsJourney extends React.Component {
       else if (current) { btnBg = "linear-gradient(180deg,#ffd56b,#f5b836)"; ring = "0 0 26px 4px rgba(245,196,81,.6)"; medalText = String(d.id); medalColor = "#1a1140"; }
       else { btnBg = "rgba(255,255,255,.05)"; ring = "inset 0 0 0 2px rgba(255,255,255,.12)"; medalText = "🔒"; medalColor = "rgba(255,255,255,.5)"; dim = "opacity:.45;"; }
       const btnStyle = `position:absolute;top:${i * STEP + STEP / 2}px;left:${cx}%;transform:translate(-50%,-50%);width:70px;height:70px;border-radius:50%;border:none;cursor:${unlocked ? "pointer" : "default"};background:${btnBg};box-shadow:${ring};display:flex;align-items:center;justify-content:center;z-index:2;${current ? "animation:ipjFloat 3s ease-in-out infinite;" : ""}`;
-      const labelLeft = side === "left" ? `${cx}% + 46px` : "auto";
-      const labelRight = side === "right" ? `${100 - cx}% + 46px` : "auto";
-      const labelStyle = `position:absolute;top:${i * STEP + STEP / 2}px;transform:translateY(-50%);${side === "left" ? `left:calc(${labelLeft});text-align:left;` : `right:calc(${labelRight});text-align:right;`}max-width:46%;z-index:2;`;
+      // Label sits on the OUTER side of the button, clear of the centre rope.
+      const labelStyle = `position:absolute;top:${i * STEP + STEP / 2}px;transform:translateY(-50%);${side === "left" ? `right:calc(${100 - cx}% + 44px);text-align:right;` : `left:calc(${cx}% + 44px);text-align:left;`}max-width:40%;z-index:2;`;
       const medalStyle = `font-family:'Fredoka';font-weight:600;font-size:${medalText.length > 1 ? "24px" : "26px"};color:${medalColor};`;
       const stars = done ? (starsMap[d.id] || 1) : 0;
-      return { name: d.name, ar: d.ar, epithet: d.epithet, btnStyle, medalStyle, medalText, labelStyle, dim, unlocked, done, stars, onClick: () => this.openProphet(d.id) };
+      return { name: d.name, ar: d.ar, epithet: d.epithet, btnStyle, medalStyle, medalText, labelStyle, dim, unlocked, done, stars, side, onClick: () => this.openProphet(d.id), onReset: done ? () => this.resetProphet(d.id) : null };
     });
     const ropeHeight = DATA.length * STEP + 40;
     // Badge gallery: earned badges fill the shelf, locked ones stay dim.
@@ -560,7 +578,8 @@ export default class ProphetsJourney extends React.Component {
     const cameraStyle = `transform:translateX(${(-ct * 15).toFixed(2)}%) scale(${(1 + ct * 0.13).toFixed(3)});transform-origin:62% 90%;transition:${this.props.reduceMotion ? "none" : "transform 1.2s cubic-bezier(.4,.1,.2,1)"};`;
     const showHud = cur && ["arrive", "story", "dres", "mres", "reward"].includes(st.sub);
     return {
-      isProfile: st.screen === "profile", isMap: st.screen === "map", isStage: st.screen === "stage",
+      isWelcome: st.screen === "welcome", isProfile: st.screen === "profile", isMap: st.screen === "map", isStage: st.screen === "stage",
+      startApp: () => this.startApp(), resetAll: () => this.resetAll(),
       skyStars: E("div", null, ...this.starField(100)),
       profiles, profileName: prof ? prof.name : "", profileInitial: prof ? prof.initial : "", profileGrad: prof ? prof.grad : "#fff", profilePic: prof ? prof.pic : "",
       noor: st.progress.noor, badgeCount: completed.length, doneCount: completed.length, nodes, ropeHeight,
@@ -580,6 +599,9 @@ export default class ProphetsJourney extends React.Component {
         soundNote: (st.lang === "ur" ? "🔊 Aawaz ke saath sunaya jaata hai · sound on rakhein" : "🔊 Narrated aloud · best with sound on"),
         langToggleLabel: (st.lang === "ur" ? "🌐 English" : "🌐 Roman Urdu"),
         yourJourney: (st.lang === "ur" ? "Aap ka Safar" : "Your Journey"),
+        playLabel: (st.lang === "ur" ? "▶  Shuru karein" : "▶  Play"),
+        welcomeSub: (st.lang === "ur" ? "Tamam 25 ambiya ke saath ek roshan safar" : "A journey of light with all 25 prophets"),
+        resetAllLabel: (st.lang === "ur" ? "↺ Saara safar reset karein" : "↺ Reset all progress"),
         badgesTitle: (st.lang === "ur" ? "Aap ke Tamghe" : "Your Badges"),
         streakLabel: (st.lang === "ur" ? "din ka silsila" : "day streak"),
         levelWord: (st.lang === "ur" ? "Darja" : "Level"),
@@ -626,6 +648,21 @@ export default class ProphetsJourney extends React.Component {
     const V = this.renderVals();
     return (
       <div style={s("position:relative;width:100%;min-height:100dvh;height:100dvh;overflow:hidden;font-family:'Nunito',system-ui,sans-serif;background:radial-gradient(120% 100% at 50% 0%,#1a1140 0%,#0c0820 70%);color:#f4eede;")}>
+
+        {/* ============ WELCOME ============ */}
+        {V.isWelcome && (
+          <div style={s("position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;")}>
+            <div style={s("position:absolute;inset:0;overflow:hidden;pointer-events:none;")}>{V.skyStars}</div>
+            <div style={s("position:relative;animation:ipjRise .8s ease both;display:flex;flex-direction:column;align-items:center;")}>
+              <div style={s("font-family:'Amiri',serif;font-size:clamp(22px,6vw,34px);color:#f5c451;letter-spacing:1px;")}>بِسْمِ اللَّهِ</div>
+              <div style={s("font-size:clamp(40px,12vw,84px);line-height:1;margin-top:14px;animation:ipjFloat 4s ease-in-out infinite;")}>🏮</div>
+              <div className="ipj-title-glow" style={s("font-family:'Fredoka';font-weight:700;font-size:clamp(34px,9vw,64px);line-height:1.04;margin-top:14px;")}>The Prophets&apos; Journey</div>
+              <div style={s("font-family:'Amiri',serif;font-size:clamp(26px,7.5vw,46px);color:#ffe6a3;margin-top:8px;direction:rtl;")}>نبیوں کا سفر</div>
+              <div style={s("opacity:.7;font-size:clamp(13px,3.6vw,18px);margin-top:14px;max-width:460px;")}>{V.t.welcomeSub}</div>
+              <button onClick={V.startApp} className="ipj-play" style={s("cursor:pointer;margin-top:38px;border:none;border-radius:50px;padding:16px 46px;font-family:'Fredoka';font-weight:700;font-size:clamp(18px,5vw,22px);color:#1a1140;background:linear-gradient(180deg,#ffd56b,#f5b836);")}>{V.t.playLabel}</button>
+            </div>
+          </div>
+        )}
 
         {/* ============ PROFILE SELECT ============ */}
         {V.isProfile && (
@@ -694,7 +731,7 @@ export default class ProphetsJourney extends React.Component {
               <div style={s("font-family:'Fredoka';font-weight:600;font-size:clamp(22px,5vw,30px);")}>{V.t.yourJourney}</div>
               <div style={s("opacity:.6;font-size:13px;")}>{V.journeySub}</div>
             </div>
-            <div className="ipj-scroll" style={s("flex:1;overflow-y:auto;position:relative;padding:10px 0 30px;")}>
+            <div className="ipj-scroll" style={s("flex:1 1 auto;min-height:0;overflow-y:auto;position:relative;padding:10px 0 30px;")}>
               <div style={s(`position:relative;width:100%;max-width:560px;margin:0 auto;height:${V.ropeHeight}px;`)}>
                 {/* the flowing rope */}
                 <div className="ipj-rope" style={s("position:absolute;left:50%;top:6px;bottom:6px;width:6px;border-radius:6px;transform:translateX(-50%);box-shadow:0 0 14px rgba(245,196,81,.5);")}></div>
@@ -708,8 +745,11 @@ export default class ProphetsJourney extends React.Component {
                       <div style={s("font-family:'Amiri',serif;font-size:14px;color:#f5c451;" + n.dim)}>{n.ar}</div>
                       <div style={s("font-size:10px;opacity:.6;" + n.dim)}>{n.epithet}</div>
                       {n.done && (
-                        <div style={s("font-size:12px;letter-spacing:1px;margin-top:2px;")}>
-                          {[0, 1, 2].map((k) => <span key={k} style={s(k < n.stars ? "color:#f5c451;" : "color:rgba(255,255,255,.18);")}>★</span>)}
+                        <div style={s("display:flex;align-items:center;gap:8px;margin-top:2px;" + (n.side === "right" ? "justify-content:flex-end;" : ""))}>
+                          <span style={s("font-size:12px;letter-spacing:1px;")}>
+                            {[0, 1, 2].map((k) => <span key={k} style={s(k < n.stars ? "color:#f5c451;" : "color:rgba(255,255,255,.18);")}>★</span>)}
+                          </span>
+                          <button onClick={n.onReset} title="Reset this prophet" style={s("cursor:pointer;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.05);color:rgba(244,238,222,.7);border-radius:20px;width:22px;height:22px;font-size:12px;line-height:1;display:flex;align-items:center;justify-content:center;")}>↺</button>
                         </div>
                       )}
                     </div>
@@ -728,6 +768,11 @@ export default class ProphetsJourney extends React.Component {
                     </div>
                   ))}
                 </div>
+              </div>
+
+              {/* ---- Reset all ---- */}
+              <div style={s("text-align:center;margin:18px auto 6px;")}>
+                <button onClick={V.resetAll} style={s("cursor:pointer;border:1px solid rgba(255,120,120,.3);background:rgba(255,120,120,.08);color:#ffb3b3;border-radius:30px;padding:9px 18px;font-family:'Fredoka';font-weight:600;font-size:13px;")}>{V.t.resetAllLabel}</button>
               </div>
             </div>
           </div>
