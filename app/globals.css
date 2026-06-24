@@ -17,6 +17,20 @@ html, body { margin: 0; padding: 0; background: #0c0820; }
 @keyframes ipjFly { 0% { transform: translate(-12vw,0) } 100% { transform: translate(118vw,-24px) } }
 @keyframes ipjFlame { 0%,100% { transform: scaleY(1) skewX(-3deg); opacity: .85 } 50% { transform: scaleY(1.25) skewX(4deg); opacity: 1 } }
 
+/* Living-scene motion: a slow ken-burns drift so the background never feels stuck,
+   plus a soft fade/zoom as each new scene arrives. */
+@keyframes ipjKenBurns { 0% { transform: scale(1.02) translate(0,0) } 33% { transform: scale(1.09) translate(-2%,-1.2%) } 66% { transform: scale(1.06) translate(1.6%,-0.6%) } 100% { transform: scale(1.02) translate(0,0) } }
+@keyframes ipjSceneIn { 0% { opacity: 0; transform: scale(1.06) } 100% { opacity: 1; transform: scale(1) } }
+@keyframes ipjShoot { 0% { transform: translate(0,0) rotate(35deg); opacity: 0 } 8% { opacity: 1 } 100% { transform: translate(60vw,42vh) rotate(35deg); opacity: 0 } }
+@keyframes ipjConfetti { 0% { transform: translateY(-10px) rotate(0); opacity: 1 } 100% { transform: translateY(86vh) rotate(720deg); opacity: 0 } }
+@keyframes ipjPop { 0% { transform: scale(0); opacity: 0 } 60% { transform: scale(1.25); opacity: 1 } 100% { transform: scale(1); opacity: 1 } }
+@keyframes ipjStarPop { 0% { transform: scale(0) rotate(-40deg); opacity: 0 } 70% { transform: scale(1.35) rotate(8deg) } 100% { transform: scale(1) rotate(0); opacity: 1 } }
+@keyframes ipjRingPulse { 0% { box-shadow: 0 0 0 0 rgba(245,196,81,.5) } 100% { box-shadow: 0 0 0 22px rgba(245,196,81,0) } }
+@keyframes ipjBadgeWobble { 0%,100% { transform: rotate(-6deg) } 50% { transform: rotate(6deg) } }
+
+.ipj-scene-wrap { animation: ipjKenBurns 34s ease-in-out infinite; will-change: transform; }
+.ipj-scene-layer { animation: ipjSceneIn .9s ease both; }
+
 .ipj-scroll::-webkit-scrollbar { width: 0; height: 0 }
 
 /* Hover behaviours ported from the prototype's `style-hover` attributes */

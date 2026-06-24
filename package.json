@@ -2,16 +2,22 @@
   "name": "prophets-journey",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "The Prophets' Journey — a gamified Islamic learning experience for kids, covering all 25 prophets in order.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "gen:audio": "node scripts/generate-audio.mjs"
   },
   "dependencies": {
     "next": "^15.1.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "microsoft-cognitiveservices-speech-sdk": "^1.43.1",
+    "sharp": "^0.35.2"
   }
 }

@@ -20,5 +20,8 @@ yarn-error.log*
 # env files
 .env*.local
 
+# audio generation log (the mp3s + manifest.json ARE committed)
+/public/audio/_genlog.txt
+
 # typescript / next
 next-env.d.ts

@@ -7,10 +7,26 @@ Built from a Claude Design prototype (see `project/` and `chats/`). Implemented 
 ## Features
 
 - **Three screens** — profile select (Hamza / Huzaifa), a vertical zig-zag journey map (lock / current / done states, Noor + badge counters), and the cinematic stage.
-- **Moving 3D-parallax scenes** — the camera travels and zooms as you progress, with per-terrain animated silhouettes (Nuh's ark, Yunus's whale, the Kaaba, Ibrahim's fire, a starfield, rain, drifting clouds, birds…), a fixed lantern as "you," and a guiding Hudhud bird.
-- **Story loop per prophet** — Arrive → multi-chapter Story → moral Decision → result → modern "apply it today" scenario → result → Reward.
-- **Synced storyteller narration** — warm, name-personalised voice (Web Speech API) that highlights each word as it's spoken, with pronunciation tuning for Islamic terms (Allah, Bismillah, MashaAllah…).
+- **Living, moving scenes** — the camera travels and zooms as you progress, over a continuous slow "ken-burns" drift and a soft fade as each new scene arrives, so the background never feels static. Per-terrain animated silhouettes (Nuh's ark, Yunus's whale, the Kaaba, Ibrahim's fire, a starfield, rain, drifting clouds, birds…), a fixed lantern as "you," and a guiding Hudhud bird.
+- **Story loop per prophet** — Arrive → multi-chapter Story → moral Decision → result → modern "apply it today" scenario → result → quick **recap quiz** → Reward.
+- **Studio-quality narration (Azure Speech)** — warm female voices (`en-US-JennyNeural` for English, `ur-PK-UzmaNeural` for Urdu) are **pre-generated** to static `.mp3` files with SSML pauses, then played back with word-by-word highlighting driven by Azure's word-boundary timings. Falls back to the browser Web Speech voice for any missing clip.
+- **Gamification** — Noor points + level ladder, 1–3 ⭐ per prophet (based on good choices), a collectible **badge gallery**, a daily **🔥 streak**, a recap quiz, plus confetti and gentle WebAudio chimes on celebrations.
 - **Bilingual** — Roman-Urdu by default, English via the 🌐 toggle. Choice + progress persist in `localStorage` per profile.
+
+## Narration audio pipeline
+
+The narration is **static, pre-generated audio** (committed under `public/audio/`), not synthesized live in the browser.
+
+- `scripts/generate-audio.mjs` enumerates every narratable beat (both languages × both travellers), builds the exact spoken string via `app/lib/narration.js` (shared with the runtime so a content hash matches), calls **Azure Speech** with SSML (`<break>` pauses, `<prosody>` rate, friendly style), and writes `public/audio/<hash>.mp3` + `public/audio/manifest.json` (per-clip duration + word-boundary timings). Identical text is hashed once, so shared lines aren't duplicated.
+- Regenerate (e.g. after editing story text or to change voices):
+
+  ```bash
+  # Credentials come from env, or are fetched via the Azure CLI if you're logged in.
+  SPEECH_KEY=<key> SPEECH_REGION=centralindia npm run gen:audio          # missing clips only
+  SPEECH_KEY=<key> SPEECH_REGION=centralindia npm run gen:audio -- --force  # rebuild all
+  ```
+
+  Voices are overridable: `VOICE_EN=en-US-AvaMultilingualNeural VOICE_UR=ur-PK-UzmaNeural ...`.
 
 ## Run it
 
@@ -23,13 +39,16 @@ npm run dev      # http://localhost:3000
 npm run build && npm run start   # production
 ```
 
-> Narration uses the **device's installed voices**. For native Urdu + properly pronounced "Allah," install an Urdu (ur-PK) voice on the device; otherwise it falls back gracefully to an English voice reading the Roman-Urdu text.
+> Narration plays the pre-generated Azure clips in `public/audio/` — no device voices or network calls needed at runtime. If a clip is missing it falls back to the browser's Web Speech voice.
 
 ## Project layout
 
 - `app/` — the Next.js application
   - `app/components/ProphetsJourney.jsx` — the full experience (rendered client-only)
   - `app/data/` — story content: `prophets-data.js` (English) + `prophets-ur.js` (Roman-Urdu)
+  - `app/lib/narration.js` — shared spoken-text assembly (used by the app **and** the audio generator)
+- `scripts/generate-audio.mjs` — Azure Speech batch generator (see "Narration audio pipeline")
+- `public/audio/` — generated `.mp3` clips + `manifest.json` (committed)
 - `project/`, `chats/` — the original Claude Design handoff bundle (kept for reference)
 
 ---
