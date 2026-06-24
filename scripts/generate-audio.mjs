@@ -28,7 +28,7 @@ import { PROPHET_DATA } from "../app/data/prophets-data.js";
 import { PROPHET_UR } from "../app/data/prophets-ur.js";
 import { PROPHET_UR_SCRIPT } from "../app/data/prophets-ur-script.js";
 import { PROPHET_AYAH } from "../app/data/prophets-ayah.js";
-import { narrationForBeat, enumerateBeats, lineNarration, TRAVELLER_NAMES } from "../app/lib/narration.js";
+import { narrationForBeat, enumerateBeats, lineNarration, GENDERS } from "../app/lib/narration.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -154,9 +154,9 @@ function allClips() {
     const us = PROPHET_UR_SCRIPT[d.id] || null;
     for (const lang of ["en", "ur"]) {
       if (ONLY_LANG && lang !== ONLY_LANG) continue;
-      for (const name of TRAVELLER_NAMES) {
+      for (const gender of GENDERS) {
         for (const beat of enumerateBeats(d, lang === "ur" ? (us || u) : null)) {
-          const r = narrationForBeat({ d, u, us, lang, name, sub: beat.sub, panel: beat.panel || 0, picked: beat.picked || null });
+          const r = narrationForBeat({ d, u, us, lang, gender, sub: beat.sub, panel: beat.panel || 0, picked: beat.picked || null });
           if (!r.spoken) continue;
           if (!clips.has(r.key)) clips.set(r.key, { spoken: r.spoken, lang, map: r.map });
         }
@@ -183,9 +183,9 @@ function validKeySet() {
     const u = PROPHET_UR[d.id] || null;
     const us = PROPHET_UR_SCRIPT[d.id] || null;
     for (const lang of ["en", "ur"]) {
-      for (const name of TRAVELLER_NAMES) {
+      for (const gender of GENDERS) {
         for (const beat of enumerateBeats(d, lang === "ur" ? (us || u) : null)) {
-          const r = narrationForBeat({ d, u, us, lang, name, sub: beat.sub, panel: beat.panel || 0, picked: beat.picked || null });
+          const r = narrationForBeat({ d, u, us, lang, gender, sub: beat.sub, panel: beat.panel || 0, picked: beat.picked || null });
           if (r.spoken) keys.add(r.key);
         }
       }
