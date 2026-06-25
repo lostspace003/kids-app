@@ -1,0 +1,12 @@
+# ads.txt for safar-anbiya.gennoor.com
+#
+# This file authorises Google to sell ads on this site. Until it lists your
+# real AdSense publisher id, ad serving/fill is limited.
+#
+# TO ACTIVATE:
+# 1. Copy the exact line AdSense shows under "Sites -> ads.txt" / "Get started".
+# 2. Replace the placeholder below (uncomment it — remove the leading "# ").
+# 3. Note: ads.txt uses "pub-XXXX" (NOT the "ca-pub-XXXX" used in code).
+# 4. Deploy. Verify at https://safar-anbiya.gennoor.com/ads.txt
+#
+# google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0
