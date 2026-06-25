@@ -44,3 +44,6 @@ next-env.d.ts
 /cert-out
 
 /audiogen3.log
+
+# showcase / marketing assets (not part of the app)
+/showcase
