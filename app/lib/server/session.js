@@ -60,5 +60,8 @@ export async function getCurrentUser() {
   if (!claims) return null;
   const user = await db.getUserById(claims.uid);
   if (!user || (user.tokenVersion || 0) !== claims.tv) return null;
+  // A flagged (content-safety banned) account is suspended everywhere: treat
+  // it as unauthenticated on every request, not just at login.
+  if (user.flagged) return null;
   return user;
 }
