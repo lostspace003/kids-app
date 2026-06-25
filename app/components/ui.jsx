@@ -14,6 +14,40 @@ export const C = {
   line: "rgba(245,196,81,.22)",
 };
 
+// Shared language state for the pre-journey screens. Uses the SAME localStorage
+// key as the journey ("ipj_lang_v2"), so the choice carries through. "en" =
+// English, "ur" = Roman-Urdu transliteration.
+export function useLang() {
+  const [lang, setLang] = React.useState("en");
+  React.useEffect(() => {
+    try { const s = localStorage.getItem("ipj_lang_v2"); if (s) setLang(s); } catch {}
+  }, []);
+  const toggle = () =>
+    setLang((l) => {
+      const n = l === "ur" ? "en" : "ur";
+      try { localStorage.setItem("ipj_lang_v2", n); } catch {}
+      return n;
+    });
+  return [lang, toggle];
+}
+
+export function LangToggle({ lang, onToggle, style }) {
+  return (
+    <button
+      onClick={onToggle}
+      style={{
+        position: "absolute", top: 10, right: 10, zIndex: 5,
+        border: `1px solid ${C.line}`, background: "rgba(245,196,81,.08)", color: C.ink,
+        borderRadius: 40, padding: "6px 12px", cursor: "pointer",
+        fontFamily: "Fredoka, sans-serif", fontWeight: 500, fontSize: 13,
+        ...style,
+      }}
+    >
+      🌐 {lang === "ur" ? "English" : "اردو"}
+    </button>
+  );
+}
+
 export function Screen({ children, narrow = false }) {
   return (
     <div
