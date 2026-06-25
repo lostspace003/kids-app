@@ -1,4 +1,5 @@
 import "./globals.css";
+import ServiceWorkerRegister from "./components/ServiceWorkerRegister";
 
 export const metadata = {
   title: "Safar Anbiya · Journey of the Prophets",
@@ -32,7 +33,10 @@ export default function RootLayout({ children }) {
           rel="stylesheet"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <ServiceWorkerRegister />
+        {children}
+      </body>
     </html>
   );
 }
