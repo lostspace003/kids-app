@@ -956,7 +956,6 @@ export default class ProphetsJourney extends React.Component {
                 <input type="range" min="0" max="2" step="0.05" value={V.volume} onChange={(e) => V.setVolume(e.target.value)} aria-label="Volume" style={{ width: 72, accentColor: "#f5c451", cursor: "pointer" }} />
                 <span style={s("font-family:'Fredoka';font-size:12px;color:#f5c451;min-width:30px;text-align:right;")}>{V.volume.toFixed(1)}×</span>
               </div>
-              <button onClick={V.toggleLang} title="Language" style={s("cursor:pointer;flex:0 0 auto;height:42px;padding:0 13px;border-radius:21px;border:1px solid rgba(255,255,255,.2);background:rgba(10,7,26,.4);color:#f4eede;font-family:'Fredoka';font-weight:600;font-size:14px;backdrop-filter:blur(6px);")}>{V.langLabel}</button>
               <button onClick={V.replay} className="ipj-round" title="Replay narration" style={s("cursor:pointer;flex:0 0 auto;width:42px;height:42px;border-radius:50%;border:1px solid rgba(255,255,255,.2);background:rgba(10,7,26,.4);color:#f4eede;font-size:18px;backdrop-filter:blur(6px);")}>↻</button>
             </div>
 

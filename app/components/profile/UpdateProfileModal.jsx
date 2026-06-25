@@ -15,6 +15,7 @@ export default function UpdateProfileModal({ profile, email, onClose, onSaved })
   const [country, setCountry] = useState(profile?.country || "");
   const [gender, setGender] = useState(profile?.gender || "boy");
   const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
 
   const photoLocked = !!profile?.photoLocked;
@@ -61,17 +62,29 @@ export default function UpdateProfileModal({ profile, email, onClose, onSaved })
 
       // 2) optional photo upload (only if added and not already locked)
       if (photoBlob && !photoLocked) {
+        setMsg("Creating avatar…");
         const fd = new FormData();
         fd.append("photo", photoBlob, "photo.png");
         const pr = await fetch("/api/profile/photo", { method: "POST", body: fd });
         const pd = await pr.json().catch(() => ({}));
         if (!pr.ok) throw new Error(pd.error || "Could not upload photo.");
         updated = pd.profile;
+        // Wait for the Ghibli avatar so we hand back the painted image, not the
+        // raw photo (which is only the pending placeholder).
+        for (let i = 0; i < 40 && updated.avatarStatus !== "ready"; i++) {
+          await new Promise((r) => setTimeout(r, 2500));
+          const s = await fetch("/api/profile/status").then((r) => r.json()).catch(() => null);
+          if (s?.ok) {
+            updated = { ...updated, avatarStatus: s.avatarStatus, avatarUrl: s.avatarUrl };
+            if (s.avatarStatus === "failed") break;
+          }
+        }
       }
       onSaved?.(updated);
     } catch (e) {
       setErr(e.message);
       setBusy(false);
+      setMsg("");
     }
   }
 
@@ -144,7 +157,7 @@ export default function UpdateProfileModal({ profile, email, onClose, onSaved })
 
           <div style={{ marginTop: 6 }}>
             <Primary onClick={save} disabled={busy || !childName.trim() || !dob || !country}>
-              {busy ? "Saving…" : photoBlob ? "Save & create avatar" : "Save changes"}
+              {msg || (busy ? "Saving…" : photoBlob ? "Save & create avatar" : "Save changes")}
             </Primary>
           </div>
           <button onClick={onClose} style={cancel}>Cancel</button>
