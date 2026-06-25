@@ -3,15 +3,15 @@
 import React from "react";
 import { Screen, Card, Primary, C } from "./ui";
 
-// Shown right after the splash: a short "what is this app" overview (English),
-// then a button into the app. Language is chosen per-journey, so there's no
-// toggle here.
+// Shown right after the splash: a short "what is this app" overview in
+// Roman-Urdu (transliteration) by default. Language for the journey itself is
+// chosen per-prophet, so there's no toggle here.
 export default function AboutIntro({ authed, onContinue }) {
   const points = [
-    ["📖", "Warm, narrated stories for every prophet"],
-    ["🤔", "Gentle choices that nurture good character (akhlaq)"],
-    ["☪️", "Verses from the Qur'an, with beautiful recitation"],
-    ["🏮", "Earn Noor and badges as the lantern grows brighter"],
+    ["📖", "Har nabi ki pyaari, sunai gayi kahani"],
+    ["🤔", "Narm faisle jo acha akhlaq sikhayein"],
+    ["☪️", "Quran ki aayaat, khoobsurat tilawat ke saath"],
+    ["🏮", "Noor aur tamghe kamaayein, lantern roshan hoti jaye"],
   ];
   return (
     <Screen>
@@ -22,13 +22,13 @@ export default function AboutIntro({ authed, onContinue }) {
             Safar <span style={{ color: C.gold }}>Anbiya</span>
           </h1>
           <div style={{ fontFamily: "Nunito, sans-serif", fontSize: 12.5, letterSpacing: 3, color: "rgba(244,238,222,.6)", marginTop: 4 }}>
-            JOURNEY OF THE PROPHETS
+            NABIYON KA SAFAR
           </div>
         </div>
 
         <p style={{ color: C.ink, fontSize: 15.5, lineHeight: 1.6, textAlign: "center", margin: "0 0 16px" }}>
-          A gentle journey of light for children through the lives of all{" "}
-          <strong style={{ color: C.gold }}>25 prophets</strong> (peace be upon them) — at your child's own pace.
+          Bachon ke liye noor se bhara ek narm safar — tamam{" "}
+          <strong style={{ color: C.gold }}>25 ambiya</strong> (alaihimussalam) ki zindagiyon ka, aap ke bachay ki apni raftar se.
         </p>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 10, margin: "0 0 20px" }}>
@@ -40,9 +40,9 @@ export default function AboutIntro({ authed, onContinue }) {
           ))}
         </div>
 
-        <Primary onClick={onContinue}>{authed ? "Continue →" : "Login to begin →"}</Primary>
+        <Primary onClick={onContinue}>{authed ? "Aage barhein →" : "Shuru karne ke liye login karein →"}</Primary>
         <p style={{ color: C.dim, fontSize: 12, textAlign: "center", margin: "12px 0 0" }}>
-          A parent-managed account keeps your child's progress safe.
+          Walid ka account aap ke bachay ki progress mehfooz rakhta hai.
         </p>
       </Card>
     </Screen>
