@@ -69,7 +69,7 @@ export function storytellerWrap({ sub, gender, lang, panelsLen, panel, decGood, 
   // happy reflection) so it never feels repetitive.
   if (sub === "story") {
     const N = panelsLen, p = panel;
-    if (p === 0) prefix = L ? `Paas aao, ${t}, aur dil laga kar suno. ` : `Come closer, ${t}, and listen with your heart. `;
+    if (p === 0) prefix = L ? `Paas aao, ${t}, aur dil laga kar suno. ` : `Come closer, little one, and listen with your heart. `;
     else if (p === Math.floor(N / 2)) prefix = L ? `Ab zara aankhein band karke ye manzar socho. ` : `Now close your eyes for a moment and picture this. `;
     else if (p === N - 1) suffix = L ? ` Ise apne dil mein narmi se basa lo.` : ` Hold that gently in your heart.`;
   } else if (sub === "decision") {
@@ -79,7 +79,7 @@ export function storytellerWrap({ sub, gender, lang, panelsLen, panel, decGood, 
   } else if (sub === "modern") {
     prefix = L ? `Aur yehi sabaq aaj tumhari duniya mein. ` : `And here is that same lesson, alive in your world today. `;
   } else if (sub === "mres") {
-    prefix = modGood ? (L ? `Bohat khoob, ${t}! ` : `Wonderful, ${t}! `) : (L ? `Aao zara ghaur karein. ` : `Let us gently reflect. `);
+    prefix = modGood ? (L ? `Bohat khoob, ${t}! ` : `Wonderful, dear! `) : (L ? `Aao zara ghaur karein. ` : `Let us gently reflect. `);
   }
   return { prefix, suffix };
 }
@@ -88,14 +88,14 @@ export function arriveText({ gender, lang, prophetName, honor, arrive }) {
   const t = termFor(gender);
   return lang === "ur"
     ? `Bismillah, ${t}. Apni lantern thaam lo — aaj hum dono mil kar ${prophetName} ${honor} ke zamane ka safar karte hain. ${arrive}`
-    : `Bismillah, ${t}. Take your lantern in hand — tonight, you and I travel together to the time of ${prophetName} ${honor}. ${arrive}`;
+    : `Bismillah, dear. Take your lantern in hand — tonight, you and I travel together to the time of ${prophetName} ${honor}. ${arrive}`;
 }
 
 export function rewardText({ gender, lang, prophetName, honor, lesson }) {
   const t = termFor(gender);
   return lang === "ur"
     ? `MashaAllah, ${t}! Aap ne ${prophetName} ${honor} ke saath safar kiya aur ${lesson} seekha. Agli manzil ab khul gayi hai.`
-    : `MashaAllah, ${t}! You journeyed with ${prophetName} ${honor} and learned about ${lesson}. The next land is now open.`;
+    : `MashaAllah, dear! You journeyed with ${prophetName} ${honor} and learned about ${lesson}. The next land is now open.`;
 }
 
 // ---------------------------------------------------------------------------

@@ -1,10 +1,11 @@
 // Upload a photo AFTER signup (for children who skipped it and use a default
 // avatar). Generates the Ghibli avatar and locks the photo from then on.
 // Rejected if a photo is already set (photos are immutable once uploaded).
-import { getCurrentUser } from "@/app/lib/server/session.js";
+import { getCurrentUser, destroySession } from "@/app/lib/server/session.js";
 import { db } from "@/app/lib/server/db.js";
 import { storage } from "@/app/lib/server/storage.js";
 import { startAvatarJob } from "@/app/lib/server/avatar-job.js";
+import { moderateImage } from "@/app/lib/server/moderation.js";
 import { json, error } from "@/app/lib/server/http.js";
 import { publicProfile } from "@/app/api/auth/me/route.js";
 
@@ -29,6 +30,14 @@ export async function POST(req) {
   const buf = Buffer.from(await photo.arrayBuffer());
   if (buf.length > 12 * 1024 * 1024) return error("Photo is too large (max 12MB).");
   const contentType = photo.type || "image/png";
+  // Content-safety screen before storing/generating; ban on failure.
+  const mod = await moderateImage(buf, contentType);
+  if (!mod.allowed) {
+    await db.updateUser(user.id, { flagged: true });
+    await db.blockEmail(user.email, ("photo:" + (mod.reason || "flagged")).slice(0, 200));
+    await destroySession();
+    return error("This photo can't be used, and the account has been blocked.", 422);
+  }
   const ext = contentType.includes("jpeg") ? "jpg" : "png";
   const photoKey = `photos/${user.id}.${ext}`;
   await storage.put(photoKey, buf);

@@ -21,6 +21,10 @@ export async function POST(req) {
   if (password.length < 8)
     return error("Password must be at least 8 characters.");
 
+  // Emails barred by the content-safety filter cannot register again.
+  if (await db.isEmailBlocked(email))
+    return error("This email address is not permitted to register.", 403);
+
   const existing = await db.getUserByEmail(email);
   if (existing && existing.emailVerified) {
     return error("An account with this email already exists. Please log in.", 409);

@@ -113,6 +113,7 @@ export default class ProphetsJourney extends React.Component {
       ayahIdx: 0,                                // which Qur'anic verse is showing
       starsEarned: 0, leveledTo: null,   // reward-screen celebration
       celebrate: 0,                       // bump to fire confetti
+      langPrompt: null,                   // prophet id awaiting a language choice
       progress: { completed: [], noor: 0, stars: {}, earned: {}, streak: 0, lastDay: null },
     };
   }
@@ -126,6 +127,19 @@ export default class ProphetsJourney extends React.Component {
     }
     // For a logged-in child, progress lives server-side (per account).
     if (this.props.childProfile) this.loadServerProgress();
+
+    // Phones suspend the audio context when a notification plays or the user
+    // leaves the browser, which silently stops narration. On returning, resume
+    // the context and re-arm the current clip so sound continues without a refresh.
+    this._onVisible = () => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      try { if (this._ac && this._ac.state === "suspended") this._ac.resume(); } catch (e) {}
+      if (this.audioEl && this.audioEl.paused && !this.state.muted && this.state.screen === "stage") {
+        this.audioEl.play().catch(() => {});
+      }
+    };
+    if (typeof document !== "undefined") document.addEventListener("visibilitychange", this._onVisible);
+    if (typeof window !== "undefined") window.addEventListener("focus", this._onVisible);
   }
 
   // Pull this account's saved progress from the server, apply the day-streak,
@@ -139,7 +153,11 @@ export default class ProphetsJourney extends React.Component {
       this.setState({ progress: prog }, () => this.saveProgress());
     }).catch(() => {});
   }
-  componentWillUnmount() { this.stopAudio(); if (this.synth) this.synth.cancel(); }
+  componentWillUnmount() {
+    this.stopAudio(); if (this.synth) this.synth.cancel();
+    if (typeof document !== "undefined" && this._onVisible) document.removeEventListener("visibilitychange", this._onVisible);
+    if (typeof window !== "undefined" && this._onVisible) window.removeEventListener("focus", this._onVisible);
+  }
   componentDidUpdate() {
     const st = this.state;
     const key = st.screen + "|" + st.curId + "|" + st.sub + "|" + st.panel + "|" + st.ayahIdx + "|" + st.quizIdx;
@@ -216,6 +234,16 @@ export default class ProphetsJourney extends React.Component {
     this.setState({ screen: "profile", profile: null });
   }
   startApp() { this.primeSpeech(); this.sfx("open"); this.setState({ screen: "profile" }); }
+  // Tapping a prophet first asks which language to travel in; the choice then
+  // opens the stage in that language.
+  promptLang(id) { const i = this.data().findIndex((d) => d.id === id); if (!this.isUnlocked(i)) return; this.sfx("open"); this.setState({ langPrompt: id }); }
+  chooseLang(lang) {
+    const id = this.state.langPrompt;
+    this.setState({ lang, langPrompt: null }, () => {
+      try { localStorage.setItem("ipj_lang_v2", lang); } catch (e) {}
+      if (id != null) this.openProphet(id);
+    });
+  }
   openProphet(id) { const i = this.data().findIndex((d) => d.id === id); if (!this.isUnlocked(i)) return; this.primeSpeech(); this.sfx("open"); this.setState({ screen: "stage", curId: id, sub: "arrive", panel: 0, pickedDec: null, pickedMod: null, goodCount: 0, earned: 0, activeWord: -1, quiz: null, quizPick: null, quizIdx: 0, ayahIdx: 0, starsEarned: 0, leveledTo: null }); }
   backToMap() { this.stopAudio(); if (this.synth) this.synth.cancel(); this.setState({ screen: "map" }); }
   beginStory() { this.sfx("page"); this.setState({ sub: "story", panel: 0, activeWord: -1 }); }
@@ -598,8 +626,8 @@ export default class ProphetsJourney extends React.Component {
       v = { key: "ayah" + this.state.ayahIdx, tag: (L ? "قرآن · " : "Qur’an · ") + (this.state.ayahIdx + 1) + "/" + (list.length || 1), icon: "☪", tagColor: "#7fe0c0",
         body: meaning, rtl: L,
         ayahAr: a.ar, ayahRef: a.ref,
-        ayahControls: { repeat: () => this.repeatRecitation(), arabic: () => this.playArabicVoice(), prev: this.state.ayahIdx > 0 ? () => this.prevAyah() : null,
-          repeatLabel: L ? "تلاوت" : "Recite", arabicLabel: L ? "عربی آواز" : "Arabic voice" },
+        ayahControls: { repeat: () => this.repeatRecitation(), prev: this.state.ayahIdx > 0 ? () => this.prevAyah() : null,
+          repeatLabel: L ? "تلاوت" : "Recite" },
         primary: { label: last ? (L ? "Chhota sawaal ›" : "Quick recap ›") : (L ? "Agli aayat ›" : "Next verse ›"), on: () => this.nextAyah() } };
     }
     else if (st === "quiz") { const items = (this.state.quiz && this.state.quiz.items) || []; const q = items[this.state.quizIdx] || { q: "", opts: [] }; const picked = this.state.quizPick;
@@ -635,7 +663,7 @@ export default class ProphetsJourney extends React.Component {
       const labelStyle = `position:absolute;top:${i * STEP + STEP / 2}px;transform:translateY(-50%);${side === "left" ? `right:calc(${100 - cx}% + 44px);text-align:right;` : `left:calc(${cx}% + 44px);text-align:left;`}max-width:40%;z-index:2;`;
       const medalStyle = `font-family:'Fredoka';font-weight:600;font-size:${medalText.length > 1 ? "24px" : "26px"};color:${medalColor};`;
       const stars = done ? (starsMap[d.id] || 1) : 0;
-      return { name: d.name, ar: d.ar, epithet: d.epithet, btnStyle, medalStyle, medalText, labelStyle, dim, unlocked, done, stars, side, onClick: () => this.openProphet(d.id), onReset: done ? () => this.resetProphet(d.id) : null };
+      return { name: d.name, ar: d.ar, epithet: d.epithet, btnStyle, medalStyle, medalText, labelStyle, dim, unlocked, done, stars, side, onClick: () => this.promptLang(d.id), onReset: done ? () => this.resetProphet(d.id) : null };
     });
     const ropeHeight = DATA.length * STEP + 40;
     // Badge gallery: earned badges fill the shelf, locked ones stay dim.
@@ -673,6 +701,8 @@ export default class ProphetsJourney extends React.Component {
       cameraStyle, lantern: cur ? this.lantern() : null,
       muteIcon: st.muted ? "🔇" : "🔊", toggleMute: () => this.toggleMute(), replay: () => this.replay(),
       volume: st.volume, setVolume: (v) => this.setVolume(v),
+      langPrompt: st.langPrompt, chooseLang: (l) => this.chooseLang(l), cancelLang: () => this.setState({ langPrompt: null }),
+      saveAchievement: () => this.saveAchievement(),
       langLabel: (st.lang === "ur" ? "EN" : "اردو"), toggleLang: () => this.toggleLang(),
       t: {
         profileSub: (st.lang === "ur" ? "Apni lantern ki roshni mein tamam 25 ambiya ke raaste ka safar karein." : "Travel the path of all 25 prophets — by the light of your lantern."),
@@ -723,6 +753,48 @@ export default class ProphetsJourney extends React.Component {
     return E("div", { key: "cf" + celebrate, style: { position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none", zIndex: 20 } },
       ...this.confettiPieces.map((p, i) => E("div", { key: i, style: { position: "absolute", top: "-16px", left: p.x + "%", width: p.w + "px", height: p.h + "px", background: p.c, borderRadius: "2px", transform: `rotate(${p.rot}deg)`, animation: `ipjConfetti ${p.dur}s ${p.delay}s cubic-bezier(.3,.6,.5,1) forwards` } }))
     );
+  }
+
+  // Render the current reward as a shareable PNG card (prophet, stars, badge,
+  // Noor, the child's avatar, and Safar Anbiya branding), then Web-Share or
+  // download it.
+  async saveAchievement() {
+    const d = this.curData(); if (!d || typeof document === "undefined") return;
+    const prof = this.state.profile && PROFILES[this.state.profile];
+    const stars = this.state.starsEarned || 0, noor = this.state.earned || 0;
+    const L = this.state.lang === "ur";
+    const W = 1080, H = 1080;
+    const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+    const ctx = cv.getContext("2d");
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, "#1b1340"); g.addColorStop(1, "#0b0720");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    const load = (src) => new Promise((res) => { const im = new Image(); im.crossOrigin = "anonymous"; im.onload = () => res(im); im.onerror = () => res(null); im.src = src; });
+    const emblem = await load(asset("/brand/png/emblem-512.png"));
+    if (emblem) ctx.drawImage(emblem, W / 2 - 95, 60, 190, 190);
+    const avatar = prof ? await load(asset(prof.pic)) : null;
+    ctx.save(); ctx.beginPath(); ctx.arc(W / 2, 430, 150, 0, Math.PI * 2); ctx.closePath(); ctx.clip();
+    if (avatar) ctx.drawImage(avatar, W / 2 - 150, 280, 300, 300); else { ctx.fillStyle = "rgba(245,196,81,.15)"; ctx.fillRect(W / 2 - 150, 280, 300, 300); }
+    ctx.restore();
+    ctx.lineWidth = 8; ctx.strokeStyle = "#f5c451"; ctx.beginPath(); ctx.arc(W / 2, 430, 150, 0, Math.PI * 2); ctx.stroke();
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#f4eede"; ctx.font = "600 54px Fredoka, sans-serif"; ctx.fillText(prof ? prof.name : "", W / 2, 650);
+    ctx.fillStyle = "#f5c451"; ctx.font = "700 42px Amiri, serif"; ctx.fillText(d.ar || "", W / 2, 720);
+    ctx.fillStyle = "#f4eede"; ctx.font = "600 40px Fredoka, sans-serif"; ctx.fillText(`${d.name} ${d.honor}`, W / 2, 786);
+    ctx.font = "60px serif"; for (let i = 0; i < 3; i++) { ctx.fillStyle = i < stars ? "#f5c451" : "rgba(255,255,255,.2)"; ctx.fillText("★", W / 2 - 80 + i * 80, 880); }
+    ctx.fillStyle = "#bff5e2"; ctx.font = "600 36px Fredoka, sans-serif"; ctx.fillText(`${d.badgeIcon} ${d.badge}   ·   +${noor} Noor`, W / 2, 958);
+    ctx.fillStyle = "rgba(244,238,222,.6)"; ctx.font = "500 30px Fredoka, sans-serif"; ctx.fillText("Safar Anbiya · safar-anbiya.gennoor.com", W / 2, 1030);
+    cv.toBlob(async (blob) => {
+      if (!blob) return;
+      const file = new File([blob], `safar-anbiya-${d.id}.png`, { type: "image/png" });
+      try {
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: "Safar Anbiya", text: L ? `${prof ? prof.name : ""} ne ${d.badge} tamgha hasil kiya!` : `${prof ? prof.name : ""} earned the ${d.badge} badge!` });
+          return;
+        }
+      } catch (e) {}
+      const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = file.name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }, "image/png");
   }
 
   render() {
@@ -908,7 +980,6 @@ export default class ProphetsJourney extends React.Component {
                         <span style={s("font-size:12px;opacity:.7;color:#7fe0c0;font-weight:700;")}>{V.view.ayahRef}</span>
                         <div style={s("display:flex;gap:8px;")}>
                           <button onClick={V.view.ayahControls.repeat} className="ipj-choice" style={s("cursor:pointer;border:1px solid rgba(127,224,192,.4);background:rgba(127,224,192,.12);color:#eafff7;border-radius:30px;padding:6px 13px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;")}>▶ {V.view.ayahControls.repeatLabel}</button>
-                          <button onClick={V.view.ayahControls.arabic} className="ipj-choice" style={s("cursor:pointer;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.06);color:#f4eede;border-radius:30px;padding:6px 13px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;")}>🔊 {V.view.ayahControls.arabicLabel}</button>
                         </div>
                       </div>
                     </div>
@@ -976,6 +1047,7 @@ export default class ProphetsJourney extends React.Component {
                         <span style={s("font-family:'Fredoka';font-weight:600;font-size:15px;color:#bff5e2;")}>Level up! {V.view.leveledTo.name}</span>
                       </div>
                     )}
+                    <button onClick={V.saveAchievement} className="ipj-choice" style={s("cursor:pointer;width:100%;margin-top:12px;border:1px solid rgba(127,224,192,.45);background:rgba(127,224,192,.12);color:#eafff7;border-radius:14px;padding:12px;font-family:'Fredoka';font-weight:600;font-size:15px;display:flex;align-items:center;justify-content:center;gap:8px;")}>🏅 {this.state.lang === "ur" ? "Tamgha save / share karein" : "Save / share this badge"}</button>
                   </div>
                 )}
 
@@ -986,6 +1058,22 @@ export default class ProphetsJourney extends React.Component {
               </div>
               </div>
              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ============ LANGUAGE PICKER (before a stage starts) ============ */}
+        {V.langPrompt != null && (
+          <div onClick={V.cancelLang} style={s("position:fixed;inset:0;z-index:50;background:rgba(5,3,15,.74);display:flex;align-items:center;justify-content:center;padding:18px;backdrop-filter:blur(3px);")}>
+            <div onClick={(e) => e.stopPropagation()} style={s("width:100%;max-width:360px;background:rgba(20,14,46,.96);border:1px solid rgba(245,196,81,.28);border-radius:22px;padding:24px 22px;text-align:center;box-shadow:0 18px 60px rgba(0,0,0,.5);")}>
+              <img src={asset("/brand/svg/emblem-glow.svg")} alt="" width="48" height="48" style={s("display:block;margin:0 auto 10px;")} />
+              <div style={s("font-family:'Fredoka';font-weight:600;font-size:20px;color:#f4eede;margin-bottom:4px;")}>Choose your language</div>
+              <div style={s("font-family:'Amiri',serif;font-size:18px;color:#f5c451;margin-bottom:18px;")}>اپنی زبان منتخب کریں</div>
+              <div style={s("display:flex;flex-direction:column;gap:10px;")}>
+                <button onClick={() => V.chooseLang("en")} className="ipj-primary" style={s("cursor:pointer;border:none;border-radius:14px;padding:14px;font-family:'Fredoka';font-weight:600;font-size:17px;color:#1a1140;background:linear-gradient(180deg,#ffd56b,#f5b836);")}>English</button>
+                <button onClick={() => V.chooseLang("ur")} className="ipj-choice" style={s("cursor:pointer;border:1px solid rgba(245,196,81,.4);background:rgba(245,196,81,.1);color:#f4eede;border-radius:14px;padding:14px;font-family:'Amiri',serif;font-weight:700;font-size:19px;")}>اردو</button>
+              </div>
+              <button onClick={V.cancelLang} style={s("margin-top:14px;background:none;border:none;color:rgba(244,238,222,.6);font-family:'Nunito';font-size:14px;cursor:pointer;")}>Cancel</button>
             </div>
           </div>
         )}

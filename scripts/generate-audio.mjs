@@ -183,7 +183,7 @@ function allClips() {
   // Ayah audio: spoken Arabic (ar) + EN meaning + UR meaning, per verse.
   for (const id of Object.keys(PROPHET_AYAH)) {
     for (const a of PROPHET_AYAH[id]) {
-      for (const [lang, text] of [["ar", a.ar], ["en", a.en], ["ur", a.ur]]) {
+      for (const [lang, text] of [["en", a.en], ["ur", a.ur]]) {
         if (ONLY_LANG && lang !== ONLY_LANG) continue;
         const r = lineNarration({ lang, text });
         if (r.spoken && !clips.has(r.key)) clips.set(r.key, { spoken: r.spoken, lang, map: r.map });
@@ -210,7 +210,7 @@ function validKeySet() {
   }
   for (const id of Object.keys(PROPHET_AYAH)) {
     for (const a of PROPHET_AYAH[id]) {
-      for (const [lang, text] of [["ar", a.ar], ["en", a.en], ["ur", a.ur]]) {
+      for (const [lang, text] of [["en", a.en], ["ur", a.ur]]) {
         const r = lineNarration({ lang, text });
         if (r.spoken) keys.add(r.key);
       }

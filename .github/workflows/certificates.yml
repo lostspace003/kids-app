@@ -1,0 +1,41 @@
+name: Send completion certificates
+
+# Every Sunday 09:00 IST (03:30 UTC): email a PDF certificate to each child who
+# has completed all prophets and hasn't been certified yet. Already-certified
+# kids are skipped automatically. Can also be run manually.
+on:
+  schedule:
+    - cron: "30 3 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: certificates
+  cancel-in-progress: false
+
+jobs:
+  certificates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      # Headless Chrome for HTML->PDF (kept out of the app's deps on purpose).
+      - run: npm install puppeteer@23 --no-save
+      - run: node scripts/send-certificates.mjs
+        env:
+          AZURE_SQL_CONNECTION_STRING: ${{ secrets.AZURE_SQL_CONNECTION_STRING }}
+          AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}
+          AZURE_STORAGE_CONTAINER: media
+          ACS_CONNECTION_STRING: ${{ secrets.ACS_CONNECTION_STRING }}
+          ACS_EMAIL_SENDER: ${{ secrets.ACS_EMAIL_SENDER }}
+          OPENAI_ENDPOINT: ${{ secrets.OPENAI_ENDPOINT }}
+          OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
+          OPENAI_DEPLOYMENT: ${{ secrets.OPENAI_DEPLOYMENT }}
+          OPENAI_API_VERSION: "2024-08-01-preview"
+          ADMIN_CC: admin@gennoor.com

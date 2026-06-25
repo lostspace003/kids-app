@@ -5,12 +5,21 @@
 //        Ghibli avatar generation, returns the profile with avatarStatus.
 // PATCH (application/json): edit static fields (childName, dob, country,
 //        gender). Email and PHOTO are locked and cannot change here.
-import { getCurrentUser } from "@/app/lib/server/session.js";
+import { getCurrentUser, destroySession } from "@/app/lib/server/session.js";
 import { db } from "@/app/lib/server/db.js";
 import { storage, mediaUrl } from "@/app/lib/server/storage.js";
 import { startAvatarJob } from "@/app/lib/server/avatar-job.js";
+import { moderateImage } from "@/app/lib/server/moderation.js";
 import { json, error } from "@/app/lib/server/http.js";
 import { publicProfile } from "@/app/api/auth/me/route.js";
+
+// Screen a photo; if it fails, flag the user, block the email, end the session.
+async function rejectAndBan(user, reason) {
+  await db.updateUser(user.id, { flagged: true });
+  await db.blockEmail(user.email, ("photo:" + (reason || "flagged")).slice(0, 200));
+  await destroySession();
+  return error("This photo can't be used, and the account has been blocked.", 422);
+}
 
 const GENDERS = new Set(["boy", "girl"]);
 
@@ -54,6 +63,9 @@ export async function POST(req) {
     const buf = Buffer.from(await photo.arrayBuffer());
     if (buf.length > 12 * 1024 * 1024) return error("Photo is too large (max 12MB).");
     const contentType = photo.type || "image/png";
+    // Content-safety screen BEFORE storing or generating anything.
+    const mod = await moderateImage(buf, contentType);
+    if (!mod.allowed) return rejectAndBan(user, mod.reason);
     const ext = contentType.includes("jpeg") ? "jpg" : "png";
     const photoKey = `photos/${user.id}.${ext}`;
     await storage.put(photoKey, buf);

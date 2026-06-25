@@ -40,3 +40,7 @@ next-env.d.ts
 /gen-samples.mjs
 
 /audiogen2.log
+
+/cert-out
+
+/audiogen3.log

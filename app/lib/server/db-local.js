@@ -20,6 +20,7 @@ const EMPTY = {
   progress: {}, // userId -> data
   feedback: [], // records
   analytics: [], // records
+  blocked: {}, // email -> { reason, at } (barred from registration)
 };
 
 let chain = Promise.resolve();
@@ -121,5 +122,12 @@ export const dbLocal = {
     tx((d) => {
       d.analytics.push(rec);
       return rec;
+    }),
+
+  // ---- email blocklist (content-safety bans) ----
+  isEmailBlocked: (email) => readonly((d) => !!d.blocked[email.toLowerCase()]),
+  blockEmail: (email, reason) =>
+    tx((d) => {
+      d.blocked[email.toLowerCase()] = { reason, at: new Date().toISOString() };
     }),
 };

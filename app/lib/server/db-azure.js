@@ -44,10 +44,15 @@ IF OBJECT_ID('dbo.analytics','U') IS NULL CREATE TABLE dbo.analytics (
   payload NVARCHAR(MAX), createdAt NVARCHAR(40));
 IF COL_LENGTH('dbo.profiles','avatarSource') IS NULL ALTER TABLE dbo.profiles ADD avatarSource NVARCHAR(20);
 IF COL_LENGTH('dbo.profiles','defaultAvatar') IS NULL ALTER TABLE dbo.profiles ADD defaultAvatar NVARCHAR(80);
+IF OBJECT_ID('dbo.blocked_emails','U') IS NULL CREATE TABLE dbo.blocked_emails (
+  email NVARCHAR(256) PRIMARY KEY, reason NVARCHAR(200), createdAt NVARCHAR(40));
+IF COL_LENGTH('dbo.users','flagged') IS NULL ALTER TABLE dbo.users ADD flagged BIT NOT NULL DEFAULT 0;
+IF OBJECT_ID('dbo.certificates','U') IS NULL CREATE TABLE dbo.certificates (
+  userId NVARCHAR(36) PRIMARY KEY, issuedAt NVARCHAR(40), pdfKey NVARCHAR(256));
 `);
 }
 
-const userFromRow = (r) => (r ? { ...r, emailVerified: !!r.emailVerified } : null);
+const userFromRow = (r) => (r ? { ...r, emailVerified: !!r.emailVerified, flagged: !!r.flagged } : null);
 
 export const dbAzure = {
   _getPool: getPool,
@@ -77,8 +82,8 @@ export const dbAzure = {
     const next = { ...cur, ...patch };
     const pool = await getPool();
     await pool.request()
-      .input("id", id).input("ph", next.passwordHash).input("ev", next.emailVerified ? 1 : 0).input("tv", next.tokenVersion || 0)
-      .query("UPDATE dbo.users SET passwordHash=@ph, emailVerified=@ev, tokenVersion=@tv WHERE id=@id");
+      .input("id", id).input("ph", next.passwordHash).input("ev", next.emailVerified ? 1 : 0).input("tv", next.tokenVersion || 0).input("fl", next.flagged ? 1 : 0)
+      .query("UPDATE dbo.users SET passwordHash=@ph, emailVerified=@ev, tokenVersion=@tv, flagged=@fl WHERE id=@id");
     return next;
   },
 
@@ -162,5 +167,18 @@ export const dbAzure = {
       .input("p", JSON.stringify(rec.payload ?? {})).input("ca", rec.createdAt)
       .query("INSERT INTO dbo.analytics (id,userId,[type],payload,createdAt) VALUES (@id,@u,@ty,@p,@ca)");
     return rec;
+  },
+
+  // ---- email blocklist (content-safety bans) ----
+  async isEmailBlocked(email) {
+    const pool = await getPool();
+    const r = await pool.request().input("e", email.toLowerCase()).query("SELECT 1 b FROM dbo.blocked_emails WHERE email=@e");
+    return r.recordset.length > 0;
+  },
+  async blockEmail(email, reason) {
+    const pool = await getPool();
+    await pool.request().input("e", email.toLowerCase()).input("r", (reason || "").slice(0, 200)).input("c", new Date().toISOString())
+      .query(`MERGE dbo.blocked_emails AS t USING (SELECT @e AS email) AS s ON t.email=s.email
+        WHEN MATCHED THEN UPDATE SET reason=@r WHEN NOT MATCHED THEN INSERT (email,reason,createdAt) VALUES (@e,@r,@c);`);
   },
 };

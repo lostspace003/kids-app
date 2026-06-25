@@ -24,6 +24,8 @@ export async function POST(req) {
   const bad = () => error("Email or password is incorrect.", 401);
   if (!user) return bad();
   if (!(await verifyPassword(password, user.passwordHash))) return bad();
+  if (user.flagged)
+    return error("This account has been blocked.", 403);
   if (!user.emailVerified)
     return error("Please verify your email before logging in.", 403);
 

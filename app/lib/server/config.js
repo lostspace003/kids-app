@@ -31,6 +31,8 @@ export const azure = {
   storageContainer: process.env.AZURE_STORAGE_CONTAINER || "media",
   acsConnectionString: process.env.ACS_CONNECTION_STRING || "",
   emailSender: process.env.ACS_EMAIL_SENDER || "",
+  contentSafetyEndpoint: process.env.CONTENT_SAFETY_ENDPOINT || "",
+  contentSafetyKey: process.env.CONTENT_SAFETY_KEY || "",
 };
 
 // Local dev data lives outside the repo (gitignored) so it never ships.
