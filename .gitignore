@@ -34,3 +34,9 @@ yarn-error.log*
 # typescript / next
 next-env.d.ts
 .vercel
+
+# local voice comparison samples (not part of the app)
+/voice-samples
+/gen-samples.mjs
+
+/audiogen2.log

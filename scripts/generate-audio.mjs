@@ -37,12 +37,27 @@ const OUT_DIR = path.join(ROOT, "public", "audio");
 // --- voice config (overridable via env) ----------------------------------
 const VOICE = {
   en: process.env.VOICE_EN || "en-US-JennyNeural",
-  ur: process.env.VOICE_UR || "ur-PK-UzmaNeural",
+  ur: process.env.VOICE_UR || "ur-PK-AsadNeural", // warm, deep Pakistani storyteller
   ar: process.env.VOICE_AR || "ar-SA-HamedNeural", // spoken-Arabic aid (qari audio is separate)
 };
 const STYLE = { en: process.env.STYLE_EN || "friendly", ur: "", ar: "" };
 const LOCALE = { en: "en-US", ur: "ur-PK", ar: "ar-SA" };
-const RATE = process.env.TTS_RATE || "-6%"; // a touch slower for a calm storyteller
+// Per-language prosody. Urdu (Asad) gets a deeper pitch + gentle rate for warmth.
+const RATE = { en: process.env.TTS_RATE || "-6%", ur: "-3%", ar: "-6%" };
+const PITCH = { en: "0%", ur: "-3%", ar: "0%" };
+
+// Pronunciation lexicon for the Urdu voice — applied only at synthesis (does
+// not affect the content hash or word highlighting). Confirmed by ear.
+const URDU_LEX = {
+  "ماشاءاللہ": `<sub alias="ماشا اللہ">ماشاءاللہ</sub>`,
+  "بسم اللہ": `<phoneme alphabet="ipa" ph="bɪsmɪlˈlaːh">بسم اللہ</phoneme>`,
+  "دھیان": `<phoneme alphabet="ipa" ph="d̪ʱjaːn">دھیان</phoneme>`,
+};
+function applyUrduLex(text) {
+  let t = text;
+  for (const [term, repl] of Object.entries(URDU_LEX)) t = t.split(term).join(repl);
+  return t;
+}
 
 const args = process.argv.slice(2);
 const FORCE = args.includes("--force");
@@ -81,7 +96,9 @@ function withBreaks(text) {
 }
 
 function buildSsml(spoken, lang) {
-  const inner = `<prosody rate="${RATE}">${withBreaks(spoken)}</prosody>`;
+  let content = withBreaks(spoken);
+  if (lang === "ur") content = applyUrduLex(content); // pronunciation fixes
+  const inner = `<prosody rate="${RATE[lang]}" pitch="${PITCH[lang]}">${content}</prosody>`;
   const body = STYLE[lang]
     ? `<mstts:express-as style="${STYLE[lang]}">${inner}</mstts:express-as>`
     : inner;

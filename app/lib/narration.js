@@ -65,19 +65,21 @@ export function storytellerWrap({ sub, gender, lang, panelsLen, panel, decGood, 
   const L = lang === "ur";
   const t = termFor(gender);
   let prefix = "", suffix = "";
+  // The term of endearment is used sparingly (only the first story beat and the
+  // happy reflection) so it never feels repetitive.
   if (sub === "story") {
     const N = panelsLen, p = panel;
-    if (p === 0) prefix = L ? `Paas aao, ${t}, aur dhyan se suno. ` : `Come closer, ${t}, and listen with your heart. `;
-    else if (p === Math.floor(N / 2)) prefix = L ? `Ab suno ${t}, zara aankhein band karke ye manzar socho. ` : `Now ${t}, close your eyes for a moment and picture this. `;
-    else if (p === N - 1) suffix = L ? ` Ise apne dil mein basa lena, ${t}.` : ` Hold that in your heart, ${t}.`;
+    if (p === 0) prefix = L ? `Paas aao, ${t}, aur dil laga kar suno. ` : `Come closer, ${t}, and listen with your heart. `;
+    else if (p === Math.floor(N / 2)) prefix = L ? `Ab zara aankhein band karke ye manzar socho. ` : `Now close your eyes for a moment and picture this. `;
+    else if (p === N - 1) suffix = L ? ` Ise apne dil mein narmi se basa lo.` : ` Hold that gently in your heart.`;
   } else if (sub === "decision") {
-    prefix = L ? `Ab ${t}, kahani aap ki taraf mudti hai. ` : `Now, ${t}, the story turns to you. `;
+    prefix = L ? `Ab kahani tumhari taraf mudti hai. ` : `Now the story turns to you. `;
   } else if (sub === "dres") {
-    prefix = decGood ? (L ? `Wah, MashaAllah, ${t}! ` : `Oh, MashaAllah, ${t}! `) : (L ? `Accha ${t}, aao mil kar sochte hain. ` : `Mmm, let us think about this together, ${t}. `);
+    prefix = decGood ? (L ? `MashaAllah, kya khoob! ` : `MashaAllah — beautiful choice! `) : (L ? `Hmm, aao mil kar sochte hain. ` : `Mmm, let us think about this together. `);
   } else if (sub === "modern") {
-    prefix = L ? `Aur suno ${t}, yehi sabaq aaj aap ki duniya mein. ` : `And here, ${t}, is that same lesson, alive in your world today. `;
+    prefix = L ? `Aur yehi sabaq aaj tumhari duniya mein. ` : `And here is that same lesson, alive in your world today. `;
   } else if (sub === "mres") {
-    prefix = modGood ? (L ? `Bohat khoob, ${t}, shabash! ` : `Beautiful, ${t}, beautiful! `) : (L ? `Accha ${t}, aao zara ghaur karein. ` : `Let us gently reflect, ${t}. `);
+    prefix = modGood ? (L ? `Bohat khoob, ${t}! ` : `Wonderful, ${t}! `) : (L ? `Aao zara ghaur karein. ` : `Let us gently reflect. `);
   }
   return { prefix, suffix };
 }
@@ -107,19 +109,21 @@ export const HONOR_UR = { "(AS)": "علیہ السلام", "ﷺ": "صلی الل
 export function storytellerWrapScript({ sub, gender, panelsLen, panel, decGood, modGood }) {
   const t = termFor(gender, true);
   let prefix = "", suffix = "";
+  // Term used sparingly (first story beat + happy reflection) so it feels
+  // natural, not forced. "suno" only once.
   if (sub === "story") {
     const N = panelsLen, p = panel;
-    if (p === 0) prefix = `پاس آؤ، ${t}، اور دھیان سے سنو۔ `;
-    else if (p === Math.floor(N / 2)) prefix = `اب سنو ${t}، ذرا آنکھیں بند کر کے یہ منظر سوچو۔ `;
-    else if (p === N - 1) suffix = ` اِسے اپنے دل میں بسا لینا، ${t}۔`;
+    if (p === 0) prefix = `پاس آؤ، ${t}، اور دل لگا کر سنو۔ `;
+    else if (p === Math.floor(N / 2)) prefix = `اب ذرا آنکھیں بند کر کے یہ منظر سوچو۔ `;
+    else if (p === N - 1) suffix = ` اِسے اپنے دل میں نرمی سے بسا لو۔`;
   } else if (sub === "decision") {
-    prefix = `اب ${t}، کہانی آپ کی طرف مڑتی ہے۔ `;
+    prefix = `اب کہانی تمہاری طرف مڑتی ہے۔ `;
   } else if (sub === "dres") {
-    prefix = decGood ? `واہ، ماشاءاللہ، ${t}! ` : `اچھا ${t}، آؤ مل کر سوچتے ہیں۔ `;
+    prefix = decGood ? `ماشاءاللہ، کیا خوب! ` : `ہمم، آؤ مل کر سوچتے ہیں۔ `;
   } else if (sub === "modern") {
-    prefix = `اور سنو ${t}، یہی سبق آج آپ کی دنیا میں۔ `;
+    prefix = `اور یہی سبق آج تمہاری دنیا میں۔ `;
   } else if (sub === "mres") {
-    prefix = modGood ? `بہت خوب، ${t}، شاباش! ` : `اچھا ${t}، آؤ ذرا غور کریں۔ `;
+    prefix = modGood ? `بہت خوب، ${t}! ` : `آؤ ذرا غور کریں۔ `;
   }
   return { prefix, suffix };
 }
