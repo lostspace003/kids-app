@@ -1,3 +1,4 @@
+
 # Web ads (Google AdSense) — setup
 
 Ads are **web-only**: they show to browser visitors of `safar-anbiya.gennoor.com`
