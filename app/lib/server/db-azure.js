@@ -42,6 +42,8 @@ IF OBJECT_ID('dbo.feedback','U') IS NULL CREATE TABLE dbo.feedback (
 IF OBJECT_ID('dbo.analytics','U') IS NULL CREATE TABLE dbo.analytics (
   id NVARCHAR(36) PRIMARY KEY, userId NVARCHAR(36), [type] NVARCHAR(80),
   payload NVARCHAR(MAX), createdAt NVARCHAR(40));
+IF COL_LENGTH('dbo.profiles','avatarSource') IS NULL ALTER TABLE dbo.profiles ADD avatarSource NVARCHAR(20);
+IF COL_LENGTH('dbo.profiles','defaultAvatar') IS NULL ALTER TABLE dbo.profiles ADD defaultAvatar NVARCHAR(80);
 `);
 }
 
@@ -95,10 +97,11 @@ export const dbAzure = {
       .input("co", p.country ?? null).input("g", p.gender ?? null).input("pk", p.photoKey ?? null)
       .input("ak", p.avatarKey ?? null).input("as", p.avatarStatus ?? null)
       .input("ca", p.createdAt ?? null).input("ua", p.updatedAt ?? null).input("ra", p.avatarReadyAt ?? null)
+      .input("asrc", p.avatarSource ?? null).input("dav", p.defaultAvatar ?? null)
       .query(`MERGE dbo.profiles AS t USING (SELECT @u AS userId) AS s ON t.userId=s.userId
-        WHEN MATCHED THEN UPDATE SET childName=@cn,dob=@dob,country=@co,gender=@g,photoKey=@pk,avatarKey=@ak,avatarStatus=@as,createdAt=@ca,updatedAt=@ua,avatarReadyAt=@ra
-        WHEN NOT MATCHED THEN INSERT (userId,childName,dob,country,gender,photoKey,avatarKey,avatarStatus,createdAt,updatedAt,avatarReadyAt)
-        VALUES (@u,@cn,@dob,@co,@g,@pk,@ak,@as,@ca,@ua,@ra);`);
+        WHEN MATCHED THEN UPDATE SET childName=@cn,dob=@dob,country=@co,gender=@g,photoKey=@pk,avatarKey=@ak,avatarStatus=@as,createdAt=@ca,updatedAt=@ua,avatarReadyAt=@ra,avatarSource=@asrc,defaultAvatar=@dav
+        WHEN NOT MATCHED THEN INSERT (userId,childName,dob,country,gender,photoKey,avatarKey,avatarStatus,createdAt,updatedAt,avatarReadyAt,avatarSource,defaultAvatar)
+        VALUES (@u,@cn,@dob,@co,@g,@pk,@ak,@as,@ca,@ua,@ra,@asrc,@dav);`);
     return p;
   },
 

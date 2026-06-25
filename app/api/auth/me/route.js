@@ -9,14 +9,22 @@ export const dynamic = "force-dynamic";
 
 export function publicProfile(p) {
   if (!p) return null;
+  // A real uploaded photo (avatarSource "photo") locks the photo. Otherwise the
+  // child uses a default traveller avatar, and can still upload one later.
+  const isPhoto = p.avatarSource === "photo" || !!p.photoKey;
+  const fallbackDefault = p.defaultAvatar || "/huzaifa.webp";
   return {
     childName: p.childName,
     dob: p.dob,
     country: p.country,
     gender: p.gender, // "boy" | "girl"
-    avatarStatus: p.avatarStatus || "none", // none | pending | ready | failed
+    avatarSource: isPhoto ? "photo" : "default",
+    photoLocked: isPhoto,
+    avatarStatus: p.avatarStatus || (isPhoto ? "pending" : "ready"),
     photoUrl: mediaUrl(p.photoKey),
-    avatarUrl: mediaUrl(p.avatarKey),
+    // While a photo avatar is still generating, fall back to the photo itself.
+    avatarUrl: isPhoto ? (mediaUrl(p.avatarKey) || mediaUrl(p.photoKey)) : fallbackDefault,
+    defaultAvatar: isPhoto ? null : fallbackDefault,
     createdAt: p.createdAt,
     updatedAt: p.updatedAt,
   };

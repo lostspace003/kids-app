@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import SafarSplash from "./SafarSplash";
+import AboutIntro from "./AboutIntro";
 import BrandMark from "./BrandMark";
 import AuthFlow from "./auth/AuthFlow";
 import ProfileSetup from "./profile/ProfileSetup";
@@ -20,9 +21,9 @@ const ProphetsJourney = dynamic(() => import("./ProphetsJourney"), { ssr: false 
 // Stages: splash -> (auth | profile | welcome | journey)
 export default function AuthGate() {
   const [me, setMe] = useState(undefined); // undefined=loading, else {user, profile}
-  const [began, setBegan] = useState(false);
   const [stage, setStage] = useState("splash");
   const [profile, setProfile] = useState(null);
+  const [pendingEnter, setPendingEnter] = useState(false); // "enter app" tapped before session loaded
 
   // Journey chrome overlays: "none" | "update" | "feedback" | "contact" | "changepw"
   const [overlay, setOverlay] = useState("none");
@@ -37,15 +38,21 @@ export default function AuthGate() {
       .catch(() => setMe({ user: null, profile: null }));
   }, []);
 
-  useEffect(() => {
-    if (stage !== "splash" || !began || me === undefined) return;
+  // Route into the app from the About page, based on the loaded session.
+  function routeIn() {
     if (!me.user) setStage("auth");
     else if (!me.profile) setStage("profile");
-    else {
-      setProfile(me.profile);
-      setStage("journey");
-    }
-  }, [began, me, stage]);
+    else { setProfile(me.profile); setStage("journey"); }
+  }
+  function enterApp() {
+    if (me === undefined) { setPendingEnter(true); return; } // wait for session
+    routeIn();
+  }
+  // If "enter" was tapped before the session finished loading, route once ready.
+  useEffect(() => {
+    if (pendingEnter && me !== undefined) { setPendingEnter(false); routeIn(); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingEnter, me]);
 
   async function onAuthed({ hasProfile }) {
     const d = await fetch("/api/auth/me").then((r) => r.json()).catch(() => null);
@@ -79,25 +86,23 @@ export default function AuthGate() {
   }
 
   // ---- pre-journey stages ----
-  if (stage === "splash") {
+  if (stage === "splash")
+    return <SafarSplash onBegin={() => setStage("intro")} />;
+  if (stage === "intro")
     return (
       <>
-        <SafarSplash onBegin={() => setBegan(true)} />
-        {began && me === undefined && <LaunchLoading />}
+        <AboutIntro authed={!!me?.user} onContinue={enterApp} />
+        {pendingEnter && <LaunchLoading />}
       </>
     );
-  }
   if (stage === "auth")
-    return (<><BrandMark /><AuthFlow onAuthed={onAuthed} /></>);
+    return <AuthFlow onAuthed={onAuthed} />;
   if (stage === "profile")
     return (
-      <>
-        <BrandMark />
-        <ProfileSetup
-          email={me?.user?.email || ""}
-          onDone={(p) => { setProfile(p); setStage("welcome"); }}
-        />
-      </>
+      <ProfileSetup
+        email={me?.user?.email || ""}
+        onDone={(p) => { setProfile(p); setStage("welcome"); }}
+      />
     );
   if (stage === "welcome")
     return (<><BrandMark /><WelcomeProfile profile={profile} onContinue={() => setStage("journey")} /></>);

@@ -60,7 +60,8 @@ export default function ProfileSetup({ email, onDone }) {
     setCropping(false);
   }
 
-  const valid = childName.trim() && dob && country && gender && photoBlob;
+  // Photo is optional — a default avatar is used when it's skipped.
+  const valid = childName.trim() && dob && country && gender;
 
   async function submit() {
     if (!valid) return;
@@ -71,19 +72,21 @@ export default function ProfileSetup({ email, onDone }) {
       fd.append("dob", dob);
       fd.append("country", country);
       fd.append("gender", gender);
-      fd.append("photo", photoBlob, "photo.png");
+      if (photoBlob) fd.append("photo", photoBlob, "photo.png");
       const res = await fetch("/api/profile", { method: "POST", body: fd });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Could not create profile.");
 
-      // Poll for the avatar (don't block forever — Welcome can show a placeholder).
+      // Only a real photo triggers avatar generation; default avatars are instant.
       let profile = data.profile;
-      for (let i = 0; i < 40 && profile.avatarStatus !== "ready"; i++) {
-        await new Promise((r) => setTimeout(r, 2500));
-        const s = await fetch("/api/profile/status").then((r) => r.json()).catch(() => null);
-        if (s?.ok) {
-          profile = { ...profile, avatarStatus: s.avatarStatus, avatarUrl: s.avatarUrl };
-          if (s.avatarStatus === "failed") break;
+      if (photoBlob) {
+        for (let i = 0; i < 40 && profile.avatarStatus !== "ready"; i++) {
+          await new Promise((r) => setTimeout(r, 2500));
+          const s = await fetch("/api/profile/status").then((r) => r.json()).catch(() => null);
+          if (s?.ok) {
+            profile = { ...profile, avatarStatus: s.avatarStatus, avatarUrl: s.avatarUrl };
+            if (s.avatarStatus === "failed") break;
+          }
         }
       }
       onDone?.(profile);
@@ -161,14 +164,14 @@ export default function ProfileSetup({ email, onDone }) {
           </div>
         </Field>
 
-        <Field label="Photo" hint="Used to create the child's avatar.">
+        <Field label="Photo (optional)" hint="Skip it and a default avatar is used — you can add one later from the menu.">
           {photoPreview ? (
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
               <img src={photoPreview} alt="" style={{ width: 72, height: 72, borderRadius: 14, objectFit: "cover", border: `1px solid ${C.line}` }} />
               <button type="button" onClick={pickFile} style={ghostBtn}>Change photo</button>
             </div>
           ) : (
-            <button type="button" onClick={pickFile} style={uploadBtn}>＋ Upload a photo</button>
+            <button type="button" onClick={pickFile} style={uploadBtn}>＋ Upload a photo (optional)</button>
           )}
           <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp"
             onChange={onFile} style={{ display: "none" }} />
@@ -189,8 +192,8 @@ export default function ProfileSetup({ email, onDone }) {
                 About the photo
               </h3>
               <p style={{ color: C.dim, fontSize: 14.5, lineHeight: 1.5, textAlign: "center", margin: "0 0 18px" }}>
-                This photo will be used to create your child's <strong style={{ color: C.ink }}>Ghibli-style avatar</strong>.
-                It stays the same afterwards and can't be changed later, so pick a clear, friendly photo. 😊
+                When you add a photo, we'll create an <strong style={{ color: C.ink }}>animated, Studio&nbsp;Ghibli&ndash;style version</strong> of it as the avatar.
+                It <strong style={{ color: C.ink }}>can't be changed afterwards</strong>, so pick a clear, friendly photo. 😊
               </p>
               <Primary onClick={acknowledgeInfo}>Choose photo</Primary>
             </div>

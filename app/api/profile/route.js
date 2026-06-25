@@ -45,30 +45,34 @@ export async function POST(req) {
   if (!validDob(dob)) return error("Please enter a valid date of birth.");
   if (!country) return error("Please choose a country.");
   if (!GENDERS.has(gender)) return error("Please choose boy or girl.");
-  if (!photo || typeof photo.arrayBuffer !== "function")
-    return error("Please upload a photo.");
-
-  const buf = Buffer.from(await photo.arrayBuffer());
-  if (buf.length > 12 * 1024 * 1024) return error("Photo is too large (max 12MB).");
-  const contentType = photo.type || "image/png";
-  const ext = contentType.includes("jpeg") ? "jpg" : "png";
-  const photoKey = `photos/${user.id}.${ext}`;
-  await storage.put(photoKey, buf);
 
   const now = new Date().toISOString();
-  const profile = await db.upsertProfile(user.id, {
-    childName,
-    dob,
-    country,
-    gender,
-    photoKey,
-    avatarStatus: "pending",
-    createdAt: now,
-    updatedAt: now,
-  });
+  const hasPhoto = photo && typeof photo.arrayBuffer === "function" && photo.size > 0;
+  let profile;
 
-  // Generate the avatar in the background; the client polls /api/profile/status.
-  startAvatarJob(user.id, buf, contentType);
+  if (hasPhoto) {
+    // Photo provided: store it, generate the Ghibli avatar, and lock the photo.
+    const buf = Buffer.from(await photo.arrayBuffer());
+    if (buf.length > 12 * 1024 * 1024) return error("Photo is too large (max 12MB).");
+    const contentType = photo.type || "image/png";
+    const ext = contentType.includes("jpeg") ? "jpg" : "png";
+    const photoKey = `photos/${user.id}.${ext}`;
+    await storage.put(photoKey, buf);
+    profile = await db.upsertProfile(user.id, {
+      childName, dob, country, gender,
+      photoKey, avatarKey: null, avatarSource: "photo", avatarStatus: "pending",
+      defaultAvatar: null, createdAt: now, updatedAt: now,
+    });
+    startAvatarJob(user.id, buf, contentType);
+  } else {
+    // No photo: assign a random default traveller avatar (can upload later).
+    const def = Math.random() < 0.5 ? "/hamza.webp" : "/huzaifa.webp";
+    profile = await db.upsertProfile(user.id, {
+      childName, dob, country, gender,
+      photoKey: null, avatarKey: null, avatarSource: "default",
+      defaultAvatar: def, avatarStatus: "ready", createdAt: now, updatedAt: now,
+    });
+  }
 
   return json({ ok: true, profile: publicProfile(profile) }, 201);
 }

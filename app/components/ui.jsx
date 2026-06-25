@@ -55,7 +55,8 @@ export function Card({ children, style }) {
 export function Title({ children, sub }) {
   return (
     <div style={{ textAlign: "center", marginBottom: 18 }}>
-      <div style={{ fontSize: 38, marginBottom: 6 }}>🏮</div>
+      {/* The Safar Anbiya lantern emblem (brand logo), not a generic emoji. */}
+      <img src="/brand/svg/emblem-glow.svg" alt="" width={54} height={54} style={{ display: "block", margin: "0 auto 6px" }} />
       <h1 style={{ fontFamily: "Fredoka, sans-serif", color: C.ink, fontSize: 24, margin: 0, fontWeight: 600 }}>
         {children}
       </h1>
