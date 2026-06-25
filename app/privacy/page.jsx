@@ -128,9 +128,22 @@ export default function PrivacyPolicy() {
             </LI>
           </ul>
           <P>
-            We do <b>not</b> show third-party advertising, we do <b>not</b> use
-            advertising or cross-app tracking, and we do <b>not</b> sell personal
-            information.
+            <b>Advertising.</b> We show <b>no advertising inside the app.</b> On our
+            public website only, we may display limited advertising provided by
+            Google (AdSense), configured as <b>non-personalised</b> and for
+            <b> child-directed treatment</b> — meaning ads are contextual, not based
+            on a personal profile of the user. Google may use cookies or similar
+            technology for non-personalised purposes such as frequency capping and
+            fraud prevention. We do <b>not</b> use cross-app tracking and we do
+            <b> not</b> sell personal information. You can learn how Google uses
+            information from sites that use its services at{" "}
+            <a
+              href="https://policies.google.com/technologies/partner-sites"
+              style={{ color: C.gold }}
+            >
+              policies.google.com/technologies/partner-sites
+            </a>
+            .
           </P>
 
           <H>How we use information</H>
@@ -177,6 +190,10 @@ export default function PrivacyPolicy() {
             <LI>
               <b>OpenAI / Azure OpenAI</b> — generating the cartoon avatar from an
               uploaded photo and helping screen images for appropriateness.
+            </LI>
+            <LI>
+              <b>Google AdSense</b> — serving limited, non-personalised,
+              child-directed ads on our public website only (never inside the app).
             </LI>
           </ul>
           <P>

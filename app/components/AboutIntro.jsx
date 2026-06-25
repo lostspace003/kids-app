@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Screen, Card, Primary, C } from "./ui";
+import AdSlot from "./ads/AdSlot";
 
 // Shown right after the splash: a short "what is this app" overview in
 // Roman-Urdu (transliteration) by default. Language for the journey itself is
@@ -44,6 +45,15 @@ export default function AboutIntro({ authed, onContinue }) {
         <p style={{ color: C.dim, fontSize: 12, textAlign: "center", margin: "12px 0 0" }}>
           Walid ka account aap ke bachay ki progress mehfooz rakhta hai.
         </p>
+
+        {/* Web-only, non-personalised ad slot (renders nothing in the app/TWA
+            or until NEXT_PUBLIC_ADSENSE_SLOT_INTRO is configured). */}
+        {process.env.NEXT_PUBLIC_ADSENSE_SLOT_INTRO && (
+          <AdSlot
+            slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_INTRO}
+            style={{ marginTop: 16, minHeight: 90 }}
+          />
+        )}
       </Card>
     </Screen>
   );

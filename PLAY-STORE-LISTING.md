@@ -96,6 +96,13 @@ Also declare:
   (Azure, Azure Communication Services, OpenAI/Azure OpenAI) are processors, not
   "sharing" in the Data safety sense — they process on our behalf.
 
+### Ads
+- **Contains ads: No.** Ads (Google AdSense) are shown **only on the public
+  website to browser visitors** and are suppressed inside the app/TWA, so the
+  app itself contains no ads. They are non-personalised and child-directed.
+  See `ADS-SETUP.md`. (If you ever show ads *inside* the app, you must change
+  this answer to "Yes" and meet the Families ads requirements.)
+
 ## App content / Families
 - This app targets children, so it must join the **Designed for Families /
   Families** program: complete the **Target audience and content** section and

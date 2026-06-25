@@ -1,5 +1,6 @@
 import "./globals.css";
 import ServiceWorkerRegister from "./components/ServiceWorkerRegister";
+import AdsenseScript from "./components/ads/AdsenseScript";
 
 export const metadata = {
   title: "Safar Anbiya · Journey of the Prophets",
@@ -35,6 +36,7 @@ export default function RootLayout({ children }) {
       </head>
       <body>
         <ServiceWorkerRegister />
+        <AdsenseScript />
         {children}
       </body>
     </html>
