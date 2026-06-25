@@ -725,7 +725,7 @@ export default class ProphetsJourney extends React.Component {
         profileSub: (st.lang === "ur" ? "Apni lantern ki roshni mein tamam 25 ambiya ke raaste ka safar karein." : "Travel the path of all 25 prophets — by the light of your lantern."),
         chooseTraveler: (st.lang === "ur" ? "Apna musafir chuno" : "Choose your traveler"),
         soundNote: (st.lang === "ur" ? "🔊 Aawaz ke saath sunaya jaata hai · sound on rakhein" : "🔊 Narrated aloud · best with sound on"),
-        langToggleLabel: (st.lang === "en" ? "🌐 English" : (st.voice === "female" ? "🌐 Urdu — female voice" : "🌐 Urdu — male voice")),
+        langToggleLabel: (st.lang === "en" ? "🌐 English" : (st.voice === "female" ? "🌐 Urdu — Uzma (female)" : "🌐 Urdu — Asad (male)")),
         yourJourney: (st.lang === "ur" ? "Aap ka Safar" : "Your Journey"),
         playLabel: (st.lang === "ur" ? "▶  Shuru karein" : "▶  Play"),
         welcomeSub: (st.lang === "ur" ? "Tamam 25 ambiya ke saath ek roshan safar" : "A journey of light with all 25 prophets"),
@@ -1089,11 +1089,11 @@ export default class ProphetsJourney extends React.Component {
                 <button onClick={() => V.chooseLang("en")} className="ipj-primary" style={s("cursor:pointer;border:none;border-radius:14px;padding:14px;font-family:'Fredoka';font-weight:600;font-size:17px;color:#1a1140;background:linear-gradient(180deg,#ffd56b,#f5b836);")}>English</button>
                 <button onClick={() => V.chooseLang("ur", "male")} className="ipj-choice" style={s("cursor:pointer;border:1px solid rgba(245,196,81,.4);background:rgba(245,196,81,.1);color:#f4eede;border-radius:14px;padding:13px 14px;display:flex;align-items:center;justify-content:center;gap:8px;")}>
                   <span style={s("font-family:'Amiri',serif;font-weight:700;font-size:19px;")}>اردو</span>
-                  <span style={s("font-family:'Fredoka';font-size:14px;opacity:.85;")}>Urdu · male voice 👳🏻‍♂️</span>
+                  <span style={s("font-family:'Fredoka';font-size:14px;opacity:.85;")}>Urdu · Asad (male) 👳🏻‍♂️</span>
                 </button>
                 <button onClick={() => V.chooseLang("ur", "female")} className="ipj-choice" style={s("cursor:pointer;border:1px solid rgba(245,196,81,.4);background:rgba(245,196,81,.1);color:#f4eede;border-radius:14px;padding:13px 14px;display:flex;align-items:center;justify-content:center;gap:8px;")}>
                   <span style={s("font-family:'Amiri',serif;font-weight:700;font-size:19px;")}>اردو</span>
-                  <span style={s("font-family:'Fredoka';font-size:14px;opacity:.85;")}>Urdu · female voice 🧕🏻</span>
+                  <span style={s("font-family:'Fredoka';font-size:14px;opacity:.85;")}>Urdu · Uzma (female) 🧕🏻</span>
                 </button>
               </div>
               <button onClick={V.cancelLang} style={s("margin-top:14px;background:none;border:none;color:rgba(244,238,222,.6);font-family:'Nunito';font-size:14px;cursor:pointer;")}>Cancel</button>
