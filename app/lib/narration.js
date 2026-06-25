@@ -39,6 +39,15 @@ export function speakForm(tok) {
   return tok;
 }
 
+// Audio key namespace. Urdu has two voices — male (ur-PK-Asad) and female
+// (ur-PK-Uzma) — that speak identical text but need separate clips. Male keeps
+// the legacy "ur" namespace so existing audio stays valid; female uses "ur-f".
+// English/Arabic are single-voice and ignore `voice`.
+export function audioNs(lang, voice = "male") {
+  if (lang === "ur") return voice === "female" ? "ur-f" : "ur";
+  return lang;
+}
+
 // Stable FNV-1a hash (hex). Identical output in Node and the browser, so the
 // generator and the runtime agree on each clip's filename.
 export function hashKey(str) {
@@ -162,7 +171,7 @@ export function assembleSpoken({ prefix, body, suffix }) {
 // Resolve the body text + storyteller wrap for a beat, given the prophet's
 // English record `d`, optional Urdu record `u`, language and traveller name.
 // Returns { display, spoken, map, key } — `key` is the audio filename stem.
-export function narrationForBeat({ d, u, us, lang, gender, sub, panel = 0, picked = null }) {
+export function narrationForBeat({ d, u, us, lang, gender, sub, panel = 0, picked = null, voice = "male" }) {
   if (lang === "ur") {
     // Spoken text comes from the Urdu-script content; the screen still shows Roman.
     const C = us || u || d;
@@ -183,7 +192,7 @@ export function narrationForBeat({ d, u, us, lang, gender, sub, panel = 0, picke
       decGood: picked === d.decision.good, modGood: picked === d.modern.good,
     });
     const { spoken, map } = assembleSpoken({ prefix, body, suffix });
-    return { display: body, spoken, map, key: hashKey("ur|" + spoken) };
+    return { display: body, spoken, map, key: hashKey(audioNs("ur", voice) + "|" + spoken) };
   }
 
   // English.
@@ -212,9 +221,9 @@ export function narrationForBeat({ d, u, us, lang, gender, sub, panel = 0, picke
 // A standalone narrated line (no storyteller wrap) — used for ayah recitation
 // meanings and the spoken Arabic. `lang` is "ar" | "en" | "ur" and picks both
 // the hash namespace and (in the generator) the voice.
-export function lineNarration({ lang, text }) {
+export function lineNarration({ lang, text, voice = "male" }) {
   const { spoken, map } = assembleSpoken({ prefix: "", body: text, suffix: "" });
-  return { spoken, map, key: hashKey(lang + "|" + spoken) };
+  return { spoken, map, key: hashKey(audioNs(lang, voice) + "|" + spoken) };
 }
 
 // Enumerate every narratable beat for a prophet (used by the generator and to

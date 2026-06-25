@@ -37,14 +37,17 @@ const OUT_DIR = path.join(ROOT, "public", "audio");
 // --- voice config (overridable via env) ----------------------------------
 const VOICE = {
   en: process.env.VOICE_EN || "en-US-JennyNeural",
-  ur: process.env.VOICE_UR || "ur-PK-AsadNeural", // warm, deep Pakistani storyteller
+  ur: process.env.VOICE_UR || "ur-PK-AsadNeural", // Urdu MALE — warm, deep Pakistani storyteller
+  ur_f: process.env.VOICE_UR_F || "ur-PK-UzmaNeural", // Urdu FEMALE
   ar: process.env.VOICE_AR || "ar-SA-HamedNeural", // spoken-Arabic aid (qari audio is separate)
 };
 const STYLE = { en: process.env.STYLE_EN || "friendly", ur: "", ar: "" };
 const LOCALE = { en: "en-US", ur: "ur-PK", ar: "ar-SA" };
-// Per-language prosody. Urdu (Asad) gets a deeper pitch + gentle rate for warmth.
-const RATE = { en: process.env.TTS_RATE || "-6%", ur: "-3%", ar: "-6%" };
-const PITCH = { en: "0%", ur: "-3%", ar: "0%" };
+// Per-language prosody. Urdu is tuned to match the user-approved voice samples
+// exactly: rate -4%, natural pitch (no artificial deepening), and no injected
+// <break> pauses — the neural voices (Asad / Uzma) pace themselves naturally.
+const RATE = { en: process.env.TTS_RATE || "-6%", ur: "-4%", ar: "-6%" };
+const PITCH = { en: "0%", ur: "0%", ar: "0%" };
 
 // Pronunciation lexicon for the Urdu voice — applied only at synthesis (does
 // not affect the content hash or word highlighting). Confirmed by ear.
@@ -95,14 +98,16 @@ function withBreaks(text) {
     .replace(/([,،])(\s+)/g, '$1<break time="140ms"/>$2');
 }
 
-function buildSsml(spoken, lang) {
-  let content = withBreaks(spoken);
-  if (lang === "ur") content = applyUrduLex(content); // pronunciation fixes
+function buildSsml(spoken, lang, voiceName) {
+  // Urdu matches the approved samples: escape only (no injected <break> tags) so
+  // the voice paces itself at punctuation, then apply the pronunciation lexicon.
+  // English/Arabic keep the gentle injected pauses.
+  let content = lang === "ur" ? applyUrduLex(xmlEscape(spoken)) : withBreaks(spoken);
   const inner = `<prosody rate="${RATE[lang]}" pitch="${PITCH[lang]}">${content}</prosody>`;
   const body = STYLE[lang]
     ? `<mstts:express-as style="${STYLE[lang]}">${inner}</mstts:express-as>`
     : inner;
-  return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="${LOCALE[lang]}"><voice name="${VOICE[lang]}">${body}</voice></speak>`;
+  return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="${LOCALE[lang]}"><voice name="${voiceName || VOICE[lang]}">${body}</voice></speak>`;
 }
 
 const normWord = (s) => s.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
@@ -130,7 +135,7 @@ function alignWords(realMap, realB) {
   return w;
 }
 
-function synthesize(spoken, lang, map, outPath) {
+function synthesize(spoken, lang, map, outPath, voiceName) {
   return new Promise((resolve, reject) => {
     const speechConfig = sdk.SpeechConfig.fromSubscription(KEY, REGION);
     speechConfig.speechSynthesisOutputFormat = sdk.SpeechSynthesisOutputFormat.Audio24Khz48KBitRateMonoMp3;
@@ -147,7 +152,7 @@ function synthesize(spoken, lang, map, outPath) {
     // as the lone "." left by a silent honorific), with their text for matching.
     const realMap = map.filter((m) => isWord(spoken.slice(m.s, m.e))).map((m) => ({ di: m.di, text: spoken.slice(m.s, m.e) }));
     synth.speakSsmlAsync(
-      buildSsml(spoken, lang),
+      buildSsml(spoken, lang, voiceName),
       (result) => {
         synth.close();
         if (result.reason !== sdk.ResultReason.SynthesizingAudioCompleted) {
@@ -164,18 +169,27 @@ function synthesize(spoken, lang, map, outPath) {
 }
 
 // --- enumerate every clip --------------------------------------------------
+// Voice variants per language. Urdu renders twice (male=Asad, female=Uzma) into
+// separate key namespaces; English/Arabic render once.
+function voiceVariants(lang) {
+  if (lang === "ur") return [["male", VOICE.ur], ["female", VOICE.ur_f]];
+  return [["male", VOICE[lang]]];
+}
+
 function allClips() {
-  const clips = new Map(); // key -> { spoken, lang, map }
+  const clips = new Map(); // key -> { spoken, lang, map, voiceName }
   for (const d of PROPHET_DATA) {
     const u = PROPHET_UR[d.id] || null;
     const us = PROPHET_UR_SCRIPT[d.id] || null;
     for (const lang of ["en", "ur"]) {
       if (ONLY_LANG && lang !== ONLY_LANG) continue;
-      for (const gender of GENDERS) {
-        for (const beat of enumerateBeats(d, lang === "ur" ? (us || u) : null)) {
-          const r = narrationForBeat({ d, u, us, lang, gender, sub: beat.sub, panel: beat.panel || 0, picked: beat.picked || null });
-          if (!r.spoken) continue;
-          if (!clips.has(r.key)) clips.set(r.key, { spoken: r.spoken, lang, map: r.map });
+      for (const [voice, voiceName] of voiceVariants(lang)) {
+        for (const gender of GENDERS) {
+          for (const beat of enumerateBeats(d, lang === "ur" ? (us || u) : null)) {
+            const r = narrationForBeat({ d, u, us, lang, gender, sub: beat.sub, panel: beat.panel || 0, picked: beat.picked || null, voice });
+            if (!r.spoken) continue;
+            if (!clips.has(r.key)) clips.set(r.key, { spoken: r.spoken, lang, map: r.map, voiceName });
+          }
         }
       }
     }
@@ -185,8 +199,10 @@ function allClips() {
     for (const a of PROPHET_AYAH[id]) {
       for (const [lang, text] of [["en", a.en], ["ur", a.ur]]) {
         if (ONLY_LANG && lang !== ONLY_LANG) continue;
-        const r = lineNarration({ lang, text });
-        if (r.spoken && !clips.has(r.key)) clips.set(r.key, { spoken: r.spoken, lang, map: r.map });
+        for (const [voice, voiceName] of voiceVariants(lang)) {
+          const r = lineNarration({ lang, text, voice });
+          if (r.spoken && !clips.has(r.key)) clips.set(r.key, { spoken: r.spoken, lang, map: r.map, voiceName });
+        }
       }
     }
   }
@@ -200,10 +216,12 @@ function validKeySet() {
     const u = PROPHET_UR[d.id] || null;
     const us = PROPHET_UR_SCRIPT[d.id] || null;
     for (const lang of ["en", "ur"]) {
-      for (const gender of GENDERS) {
-        for (const beat of enumerateBeats(d, lang === "ur" ? (us || u) : null)) {
-          const r = narrationForBeat({ d, u, us, lang, gender, sub: beat.sub, panel: beat.panel || 0, picked: beat.picked || null });
-          if (r.spoken) keys.add(r.key);
+      for (const [voice] of voiceVariants(lang)) {
+        for (const gender of GENDERS) {
+          for (const beat of enumerateBeats(d, lang === "ur" ? (us || u) : null)) {
+            const r = narrationForBeat({ d, u, us, lang, gender, sub: beat.sub, panel: beat.panel || 0, picked: beat.picked || null, voice });
+            if (r.spoken) keys.add(r.key);
+          }
         }
       }
     }
@@ -211,8 +229,10 @@ function validKeySet() {
   for (const id of Object.keys(PROPHET_AYAH)) {
     for (const a of PROPHET_AYAH[id]) {
       for (const [lang, text] of [["en", a.en], ["ur", a.ur]]) {
-        const r = lineNarration({ lang, text });
-        if (r.spoken) keys.add(r.key);
+        for (const [voice] of voiceVariants(lang)) {
+          const r = lineNarration({ lang, text, voice });
+          if (r.spoken) keys.add(r.key);
+        }
       }
     }
   }
@@ -226,7 +246,7 @@ async function main() {
 
   const clips = allClips();
   const entries = [...clips.entries()];
-  console.log(`Voices: en=${VOICE.en}, ur=${VOICE.ur} | ${entries.length} unique clips total.`);
+  console.log(`Voices: en=${VOICE.en}, ur(m)=${VOICE.ur}, ur(f)=${VOICE.ur_f} | ${entries.length} unique clips total.`);
 
   let done = 0, made = 0, skipped = 0, mismatches = 0, failed = 0;
   for (const [key, clip] of entries) {
@@ -234,7 +254,7 @@ async function main() {
     if (!FORCE && fs.existsSync(mp3) && manifest[key]) { skipped++; continue; }
     if (made >= LIMIT) break;
     try {
-      const meta = await synthesize(clip.spoken, clip.lang, clip.map, mp3);
+      const meta = await synthesize(clip.spoken, clip.lang, clip.map, mp3, clip.voiceName);
       manifest[key] = { d: meta.d, w: meta.w, l: clip.lang };
       if (meta.mismatch) mismatches++;
       made++;

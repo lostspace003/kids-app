@@ -88,6 +88,8 @@ export default class ProphetsJourney extends React.Component {
     this.manifest = null;          // pre-generated Azure audio index (loaded on mount)
     this.audioEl = null; this._raf = 0; this._ac = null;
     let lang0 = "ur"; try { const sv = localStorage.getItem("ipj_lang_v2"); if (sv) lang0 = sv; } catch (e) {}
+    // Urdu narration voice: "male" (ur-PK-Asad) or "female" (ur-PK-Uzma).
+    let voice0 = "male"; try { const sv = localStorage.getItem("ipj_voice"); if (sv === "female" || sv === "male") voice0 = sv; } catch (e) {}
     let vol0 = 1; try { const sv = localStorage.getItem("ipj_volume"); if (sv != null) vol0 = Math.min(2, Math.max(0, parseFloat(sv))); } catch (e) {}
 
     // When a logged-in child profile is supplied, the traveller IS that child:
@@ -108,7 +110,7 @@ export default class ProphetsJourney extends React.Component {
     this.state = {
       screen: cp ? "map" : "welcome", profile: cp ? "me" : null, sub: "arrive", curId: null, panel: 0,
       pickedDec: null, pickedMod: null, goodCount: 0, earned: 0,
-      muted: false, volume: vol0, activeWord: -1, lang: lang0,
+      muted: false, volume: vol0, activeWord: -1, lang: lang0, voice: voice0,
       quiz: null, quizPick: null, quizIdx: 0,   // mini-quiz recap state
       ayahIdx: 0,                                // which Qur'anic verse is showing
       starsEarned: 0, leveledTo: null,   // reward-screen celebration
@@ -237,10 +239,15 @@ export default class ProphetsJourney extends React.Component {
   // Tapping a prophet first asks which language to travel in; the choice then
   // opens the stage in that language.
   promptLang(id) { const i = this.data().findIndex((d) => d.id === id); if (!this.isUnlocked(i)) return; this.sfx("open"); this.setState({ langPrompt: id }); }
-  chooseLang(lang) {
+  chooseLang(lang, voice) {
     const id = this.state.langPrompt;
-    this.setState({ lang, langPrompt: null }, () => {
-      try { localStorage.setItem("ipj_lang_v2", lang); } catch (e) {}
+    const next = { lang, langPrompt: null };
+    if (voice === "male" || voice === "female") next.voice = voice;
+    this.setState(next, () => {
+      try {
+        localStorage.setItem("ipj_lang_v2", lang);
+        if (next.voice) localStorage.setItem("ipj_voice", next.voice);
+      } catch (e) {}
       if (id != null) this.openProphet(id);
     });
   }
@@ -453,7 +460,7 @@ export default class ProphetsJourney extends React.Component {
   narrateAyahMeaning() {
     const a = this.ayahList()[this.state.ayahIdx]; if (!a) return;
     const text = this.state.lang === "ur" ? a.ur : a.en;
-    const r = lineNarration({ lang: this.state.lang, text });
+    const r = lineNarration({ lang: this.state.lang, text, voice: this.state.voice });
     this._lastSpoken = r.spoken; this._lastMap = r.map;
     if (!this.playStatic(r.key)) this.speakWeb(r.spoken, r.map);
   }
@@ -471,7 +478,7 @@ export default class ProphetsJourney extends React.Component {
       return;
     }
     const beat = this.currentBeat();
-    const r = narrationForBeat({ d, u: PROPHET_UR[d.id] || null, us: PROPHET_UR_SCRIPT[d.id] || null, lang: this.state.lang, gender: this.myGender(), sub: beat.sub, panel: beat.panel || 0, picked: beat.picked || null });
+    const r = narrationForBeat({ d, u: PROPHET_UR[d.id] || null, us: PROPHET_UR_SCRIPT[d.id] || null, lang: this.state.lang, gender: this.myGender(), sub: beat.sub, panel: beat.panel || 0, picked: beat.picked || null, voice: this.state.voice });
     this._lastSpoken = r.spoken; this._lastMap = r.map;
     const even = this.state.lang === "ur" ? _tokenize(this.buildView().body).length : 0;
     if (!this.playStatic(r.key, even)) this.speakWeb(r.spoken, r.map);
@@ -490,7 +497,17 @@ export default class ProphetsJourney extends React.Component {
 
   toggleMute() { this.setState((st) => ({ muted: !st.muted }), () => { if (this.state.muted) { this.stopAudio(); this.setState({ activeWord: -1 }); } else { this.narrateCurrent(); } }); }
   replay() { if (this.state.muted) return; this.stopAudio(); this.setState({ activeWord: -1 }, () => this.narrateCurrent()); }
-  toggleLang() { this.setState((st) => ({ lang: st.lang === "ur" ? "en" : "ur", activeWord: -1 }), () => { try { localStorage.setItem("ipj_lang_v2", this.state.lang); } catch (e) {} this.stopAudio(); this._spokeKey = null; this.narrateCurrent(); }); }
+  // Cycle the three narration options: English → Urdu (male) → Urdu (female) → …
+  toggleLang() {
+    this.setState((st) => {
+      if (st.lang === "en") return { lang: "ur", voice: "male", activeWord: -1 };
+      if (st.lang === "ur" && st.voice !== "female") return { lang: "ur", voice: "female", activeWord: -1 };
+      return { lang: "en", activeWord: -1 };
+    }, () => {
+      try { localStorage.setItem("ipj_lang_v2", this.state.lang); localStorage.setItem("ipj_voice", this.state.voice); } catch (e) {}
+      this.stopAudio(); this._spokeKey = null; this.narrateCurrent();
+    });
+  }
 
   // ---------- SCENE PIECES ----------
   moonEl(p) {
@@ -701,14 +718,14 @@ export default class ProphetsJourney extends React.Component {
       cameraStyle, lantern: cur ? this.lantern() : null,
       muteIcon: st.muted ? "🔇" : "🔊", toggleMute: () => this.toggleMute(), replay: () => this.replay(),
       volume: st.volume, setVolume: (v) => this.setVolume(v),
-      langPrompt: st.langPrompt, chooseLang: (l) => this.chooseLang(l), cancelLang: () => this.setState({ langPrompt: null }),
+      langPrompt: st.langPrompt, chooseLang: (l, v) => this.chooseLang(l, v), cancelLang: () => this.setState({ langPrompt: null }),
       saveAchievement: () => this.saveAchievement(),
       langLabel: (st.lang === "ur" ? "EN" : "اردو"), toggleLang: () => this.toggleLang(),
       t: {
         profileSub: (st.lang === "ur" ? "Apni lantern ki roshni mein tamam 25 ambiya ke raaste ka safar karein." : "Travel the path of all 25 prophets — by the light of your lantern."),
         chooseTraveler: (st.lang === "ur" ? "Apna musafir chuno" : "Choose your traveler"),
         soundNote: (st.lang === "ur" ? "🔊 Aawaz ke saath sunaya jaata hai · sound on rakhein" : "🔊 Narrated aloud · best with sound on"),
-        langToggleLabel: (st.lang === "ur" ? "🌐 English" : "🌐 Roman Urdu"),
+        langToggleLabel: (st.lang === "en" ? "🌐 English" : (st.voice === "female" ? "🌐 Urdu — female voice" : "🌐 Urdu — male voice")),
         yourJourney: (st.lang === "ur" ? "Aap ka Safar" : "Your Journey"),
         playLabel: (st.lang === "ur" ? "▶  Shuru karein" : "▶  Play"),
         welcomeSub: (st.lang === "ur" ? "Tamam 25 ambiya ke saath ek roshan safar" : "A journey of light with all 25 prophets"),
@@ -1070,7 +1087,14 @@ export default class ProphetsJourney extends React.Component {
               <div style={s("font-family:'Amiri',serif;font-size:18px;color:#f5c451;margin-bottom:18px;")}>اپنی زبان منتخب کریں</div>
               <div style={s("display:flex;flex-direction:column;gap:10px;")}>
                 <button onClick={() => V.chooseLang("en")} className="ipj-primary" style={s("cursor:pointer;border:none;border-radius:14px;padding:14px;font-family:'Fredoka';font-weight:600;font-size:17px;color:#1a1140;background:linear-gradient(180deg,#ffd56b,#f5b836);")}>English</button>
-                <button onClick={() => V.chooseLang("ur")} className="ipj-choice" style={s("cursor:pointer;border:1px solid rgba(245,196,81,.4);background:rgba(245,196,81,.1);color:#f4eede;border-radius:14px;padding:14px;font-family:'Amiri',serif;font-weight:700;font-size:19px;")}>اردو</button>
+                <button onClick={() => V.chooseLang("ur", "male")} className="ipj-choice" style={s("cursor:pointer;border:1px solid rgba(245,196,81,.4);background:rgba(245,196,81,.1);color:#f4eede;border-radius:14px;padding:13px 14px;display:flex;align-items:center;justify-content:center;gap:8px;")}>
+                  <span style={s("font-family:'Amiri',serif;font-weight:700;font-size:19px;")}>اردو</span>
+                  <span style={s("font-family:'Fredoka';font-size:14px;opacity:.85;")}>Urdu · male voice 👳🏻‍♂️</span>
+                </button>
+                <button onClick={() => V.chooseLang("ur", "female")} className="ipj-choice" style={s("cursor:pointer;border:1px solid rgba(245,196,81,.4);background:rgba(245,196,81,.1);color:#f4eede;border-radius:14px;padding:13px 14px;display:flex;align-items:center;justify-content:center;gap:8px;")}>
+                  <span style={s("font-family:'Amiri',serif;font-weight:700;font-size:19px;")}>اردو</span>
+                  <span style={s("font-family:'Fredoka';font-size:14px;opacity:.85;")}>Urdu · female voice 🧕🏻</span>
+                </button>
               </div>
               <button onClick={V.cancelLang} style={s("margin-top:14px;background:none;border:none;color:rgba(244,238,222,.6);font-family:'Nunito';font-size:14px;cursor:pointer;")}>Cancel</button>
             </div>
