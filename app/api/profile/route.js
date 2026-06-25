@@ -17,9 +17,8 @@ const GENDERS = new Set(["boy", "girl"]);
 function validDob(dob) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dob || "")) return false;
   const d = new Date(dob);
-  const now = new Date();
-  // Reasonable bounds: not in the future, not older than 18 years.
-  return d <= now && d >= new Date(now.getFullYear() - 18, now.getMonth(), now.getDate());
+  // Allow any real past date — only reject invalid dates or future ones.
+  return !isNaN(d.getTime()) && d <= new Date() && d >= new Date("1900-01-01");
 }
 
 export async function POST(req) {
