@@ -14,6 +14,13 @@ export const metadata = {
     ],
     apple: "/brand/png/apple-touch-icon-180.png",
   },
+  // iOS doesn't read manifest "display: standalone" — these Apple meta tags are
+  // what make an Add-to-Home-Screen launch run full-screen without Safari chrome.
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Safar Anbiya",
+  },
 };
 
 export const viewport = {
