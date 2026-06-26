@@ -725,7 +725,10 @@ export default class ProphetsJourney extends React.Component {
       const labelStyle = `position:absolute;top:${i * STEP + STEP / 2}px;transform:translateY(-50%);${side === "left" ? `right:calc(${100 - cx}% + 44px);text-align:right;` : `left:calc(${cx}% + 44px);text-align:left;`}max-width:40%;z-index:2;`;
       const medalStyle = `font-family:'Fredoka';font-weight:600;font-size:${medalText.length > 1 ? "24px" : "26px"};color:${medalColor};`;
       const stars = done ? (starsMap[d.id] || 1) : 0;
-      return { name: d.name, ar: d.ar, epithet: d.epithet, btnStyle, medalStyle, medalText, labelStyle, dim, unlocked, done, stars, side, onClick: () => this.promptLang(d.id), onReset: done ? () => this.resetProphet(d.id) : null };
+      // On the "Your Journey" map, Muhammad ﷺ is honoured as رسول الله
+      // (Messenger of Allah) in Arabic rather than the bare name.
+      const nodeAr = d.special ? "رسول الله" : d.ar;
+      return { name: d.name, ar: nodeAr, epithet: d.epithet, btnStyle, medalStyle, medalText, labelStyle, dim, unlocked, done, stars, side, onClick: () => this.promptLang(d.id), onReset: done ? () => this.resetProphet(d.id) : null };
     });
     const ropeHeight = DATA.length * STEP + 40;
     // Badge gallery: earned badges fill the shelf, locked ones stay dim.
