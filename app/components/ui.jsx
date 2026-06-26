@@ -15,10 +15,10 @@ export const C = {
 };
 
 // Shared language state for the pre-journey screens. Uses the SAME localStorage
-// key as the journey ("ipj_lang_v2"), so the choice carries through. "en" =
-// English, "ur" = Roman-Urdu transliteration.
+// key as the journey ("ipj_lang_v2"), so the choice carries through. "ur" =
+// Roman-Urdu transliteration (default), "en" = English.
 export function useLang() {
-  const [lang, setLang] = React.useState("en");
+  const [lang, setLang] = React.useState("ur");
   React.useEffect(() => {
     try { const s = localStorage.getItem("ipj_lang_v2"); if (s) setLang(s); } catch {}
   }, []);
