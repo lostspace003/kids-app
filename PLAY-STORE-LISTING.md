@@ -35,8 +35,9 @@ WHAT'S INSIDE
 • Gentle choices — little "what would you do?" moments that nurture good akhlaq.
 • Recap quizzes — simple questions that help the lessons stick.
 • Rewards that delight — collect Noor, earn badges, and light up each new land.
-• A friendly leaderboard — see how you rank by Noor. It's privacy-first: children
-  appear only as a fun icon and a playful handle, never a real name or photo.
+• A friendly leaderboard — see how you rank by a blend of Noor and your daily
+  streak. Children appear by first name and age with a fun icon — never a photo,
+  surname, or country — and a parent can hide their child with a PIN-protected opt-out.
 • Try before you sign in — preview a story as a guest, then create a free parent
   account to continue and save progress.
 • A Certificate of Completion — finish all 25 prophets and receive a personalised
@@ -96,23 +97,25 @@ The app DOES collect personal data, so answer "Yes" and declare:
 | Data type | Collected | Purpose | Shared | Notes |
 |-----------|-----------|---------|--------|-------|
 | Email address | Yes | Account management | No | Parent's email; verification + certificate emails |
-| Name | Yes | App functionality / personalisation | No | Child's first name/nickname |
-| Date of birth | Yes | App functionality | No | Used for age-appropriateness |
+| Name | Yes | App functionality / personalisation | **Yes** | Child's first name; **shown on the public leaderboard** |
+| Date of birth | Yes | App functionality | **Yes (age)** | Age shown on the leaderboard; full DOB never shown/shared |
 | Other info (country, gender) | Yes | App functionality | No | Profile setup |
 | Photos | Yes | App functionality | No | Optional; used to generate the avatar |
 | App activity (progress) | Yes | App functionality | No | Prophets completed, badges, Noor |
 | App info & performance / Device IDs | Only if applicable | — | — | Standard logs only; no analytics/ads SDKs |
 
-**Leaderboard note (no extra data shared):** the leaderboard is **pseudonymous** —
-it shows only a generated handle + fun icon + score. No child name, photo, age,
-DOB, or country is shown to other users. DOB is used only server-side as a hidden
-tie-breaker. A child aged ≤10 may show their **cartoon (Ghibli) avatar** instead
-of an icon — never the real uploaded photo. A parent can **hide their child** from
-the leaderboard at any time, protected by a **4-digit PIN** (stored only as a
-salted hash; resettable via an emailed code). Guest "preview a story" mode creates
-no account and stores no personal data. So this feature does **not** change the
-data types collected above and is **not** "sharing" personal data in the
-Data-safety sense.
+**Leaderboard note (name + age are publicly visible):** the leaderboard shows each
+child&rsquo;s **first name and age**, plus their score, streak, and lands completed,
+to other users. It does **not** show a photo, surname, full DOB, or country. The
+full DOB is used only to compute age and as a hidden server-side tie-breaker. A
+child aged ≤10 may show their **cartoon (Ghibli) avatar** instead of an icon — never
+the real uploaded photo. A parent can **hide their child** from the leaderboard at
+any time, protected by a **4-digit PIN** (stored only as a salted hash; resettable
+via an emailed code). Because first name + age are visible to other users, in the
+Data safety form mark **Name** and **Date of birth (age)** as **"Shared"** (purpose:
+app functionality), or disable the leaderboard before launch if you prefer not to
+declare sharing. Guest "preview a story" mode creates no account and stores no
+personal data.
 
 Also declare:
 - **Data is encrypted in transit:** Yes (HTTPS).

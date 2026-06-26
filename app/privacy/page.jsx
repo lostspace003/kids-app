@@ -172,22 +172,22 @@ export default function PrivacyPolicy() {
             &ldquo;Your choices&rdquo; below).
           </P>
 
-          <H>Leaderboard (pseudonymous)</H>
+          <H>Leaderboard</H>
           <P>
-            The app includes an optional leaderboard that ranks children by their
-            total &ldquo;Noor&rdquo; (in-app achievement points). To protect
-            children, the leaderboard is <b>pseudonymous</b>: each child is shown
-            only as a <b>fun mascot icon and an auto-generated handle</b> (for
-            example, &ldquo;Brave Lantern&rdquo;). We do <b>not</b> display a
-            child&rsquo;s real name, photo, age, date of birth, or country to other
-            users. A child&rsquo;s date of birth is used only privately, on our
-            server, as a tie-breaker when two scores are equal (younger first) — it
-            is never shown. Tapping another entry shows only that same public
-            information (icon, handle, score, lands completed). A child aged 10 or
-            under may show their cartoon (Ghibli) avatar instead of an icon — never
-            a real photo. A parent can hide their child from the leaderboard at any
-            time; this control is protected by a 4-digit PIN (resettable by an
-            emailed code).
+            The app includes an optional leaderboard that ranks children by a score
+            combining their total &ldquo;Noor&rdquo; (in-app achievement points)
+            with their daily learning streak. Each entry shows the child&rsquo;s
+            <b> first name and age</b>, their score, streak, and number of lands
+            completed, alongside a fun mascot icon (or, for a child aged 10 or
+            under, their cartoon (Ghibli) avatar). We do <b>not</b> display a
+            child&rsquo;s <b>photo, surname, full date of birth, or country</b> to
+            other users. A child&rsquo;s full date of birth is used only to compute
+            age and, privately on our server, as a tie-breaker when two scores are
+            equal (younger first). If no first name is on file, an auto-generated
+            handle is shown instead. <b>A parent can hide their child from the
+            leaderboard at any time</b> — this opt-out control is protected by a
+            4-digit PIN (resettable by an emailed code), and a hidden child&rsquo;s
+            name, age, and score are not shown to anyone.
           </P>
 
           <H>Trying the app without an account</H>
