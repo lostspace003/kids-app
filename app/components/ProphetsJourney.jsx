@@ -14,6 +14,7 @@ import {
   arriveText,
   rewardText,
 } from "../lib/narration";
+import { STREAK_WEIGHT } from "../lib/leaderboard";
 
 const E = React.createElement;
 
@@ -119,7 +120,7 @@ export default class ProphetsJourney extends React.Component {
       celebrate: 0,                       // bump to fire confetti
       langPrompt: null,                   // prophet id awaiting a language choice
       progress: { completed: [], noor: 0, stars: {}, earned: {}, streak: 0, lastDay: null },
-      lbOpen: false, lbBusy: false, lbData: null, lbSelected: null, // leaderboard
+      lbOpen: false, lbBusy: false, lbData: null, lbSelected: null, lbInfo: false, // leaderboard
     };
   }
 
@@ -168,8 +169,13 @@ export default class ProphetsJourney extends React.Component {
     if (typeof document !== "undefined" && this._onVisible) document.removeEventListener("visibilitychange", this._onVisible);
     if (typeof window !== "undefined" && this._onVisible) window.removeEventListener("focus", this._onVisible);
   }
-  componentDidUpdate() {
+  componentDidUpdate(prevProps) {
     const st = this.state;
+    // The host (AuthGate) opens the leaderboard from the hamburger menu by
+    // bumping lbOpenSignal — there's no ref into this dynamic-imported class.
+    if (prevProps && prevProps.lbOpenSignal !== this.props.lbOpenSignal && this.props.lbOpenSignal) {
+      this.openLeaderboard();
+    }
     // Tell the host (AuthGate) which screen we're on so it can hide app chrome
     // (e.g. the menu button) during a story to avoid overlapping the card.
     if (st.screen !== this._lastScreen) {
@@ -761,7 +767,9 @@ export default class ProphetsJourney extends React.Component {
       guest: this.isGuest, requestLogin: () => this.requestLogin(),
       openLeaderboard: () => this.openLeaderboard(), closeLeaderboard: () => this.closeLeaderboard(),
       selectLbEntry: (e) => this.setState({ lbSelected: e }),
-      lbOpen: st.lbOpen, lbBusy: st.lbBusy, lbData: st.lbData, lbSelected: st.lbSelected,
+      toggleLbInfo: () => this.setState({ lbInfo: !this.state.lbInfo }),
+      lbOpen: st.lbOpen, lbBusy: st.lbBusy, lbData: st.lbData, lbSelected: st.lbSelected, lbInfo: st.lbInfo,
+      streakWeight: STREAK_WEIGHT,
       saveAchievement: () => this.saveAchievement(),
       langLabel: (st.lang === "ur" ? "EN" : "اردو"), toggleLang: () => this.toggleLang(),
       t: {
@@ -816,7 +824,7 @@ export default class ProphetsJourney extends React.Component {
   }
 
   // Render the current reward as a shareable PNG card (prophet, stars, badge,
-  // Noor, the child's avatar, and Safar Anbiya branding), then Web-Share or
+  // Noor, the child's avatar, and Safar-e-Anbiya branding), then Web-Share or
   // download it.
   async saveAchievement() {
     const d = this.curData(); if (!d || typeof document === "undefined") return;
@@ -843,13 +851,13 @@ export default class ProphetsJourney extends React.Component {
     ctx.fillStyle = "#f4eede"; ctx.font = "600 40px Fredoka, sans-serif"; ctx.fillText(`${d.name} ${d.honor}`, W / 2, 786);
     ctx.font = "60px serif"; for (let i = 0; i < 3; i++) { ctx.fillStyle = i < stars ? "#f5c451" : "rgba(255,255,255,.2)"; ctx.fillText("★", W / 2 - 80 + i * 80, 880); }
     ctx.fillStyle = "#bff5e2"; ctx.font = "600 36px Fredoka, sans-serif"; ctx.fillText(`${d.badgeIcon} ${d.badge}   ·   +${noor} Noor`, W / 2, 958);
-    ctx.fillStyle = "rgba(244,238,222,.6)"; ctx.font = "500 30px Fredoka, sans-serif"; ctx.fillText("Safar Anbiya · safar-anbiya.gennoor.com", W / 2, 1030);
+    ctx.fillStyle = "rgba(244,238,222,.6)"; ctx.font = "500 30px Fredoka, sans-serif"; ctx.fillText("Safar-e-Anbiya · safar-anbiya.gennoor.com", W / 2, 1030);
     cv.toBlob(async (blob) => {
       if (!blob) return;
       const file = new File([blob], `safar-anbiya-${d.id}.png`, { type: "image/png" });
       try {
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file], title: "Safar Anbiya", text: L ? `${prof ? prof.name : ""} ne ${d.badge} tamgha hasil kiya!` : `${prof ? prof.name : ""} earned the ${d.badge} badge!` });
+          await navigator.share({ files: [file], title: "Safar-e-Anbiya", text: L ? `${prof ? prof.name : ""} ne ${d.badge} tamgha hasil kiya!` : `${prof ? prof.name : ""} earned the ${d.badge} badge!` });
           return;
         }
       } catch (e) {}
@@ -1162,9 +1170,20 @@ export default class ProphetsJourney extends React.Component {
               <div style={s("display:flex;align-items:center;gap:10px;margin-bottom:4px;")}>
                 <span style={s("font-size:22px;")}>🏆</span>
                 <div style={s("font-family:'Fredoka';font-weight:600;font-size:20px;color:#f4eede;flex:1;")}>Leaderboard</div>
+                <button onClick={V.toggleLbInfo} aria-label="How the score is calculated" title="How the score is calculated" style={s(`cursor:pointer;border:1px solid ${V.lbInfo ? "rgba(127,224,192,.6)" : "rgba(255,255,255,.18)"};background:${V.lbInfo ? "rgba(127,224,192,.16)" : "rgba(255,255,255,.06)"};color:#bff5e2;border-radius:50%;width:30px;height:30px;font-size:15px;font-family:'Fredoka';font-weight:700;font-style:italic;`)}>i</button>
                 <button onClick={V.closeLeaderboard} style={s("cursor:pointer;border:none;background:rgba(255,255,255,.08);color:#f4eede;border-radius:50%;width:30px;height:30px;font-size:15px;")}>✕</button>
               </div>
-              <div style={s("font-size:12.5px;opacity:.6;margin-bottom:12px;")}>Ranked by total Noor · younger travellers rank first on a tie</div>
+              <div style={s("font-size:12.5px;opacity:.6;margin-bottom:12px;")}>Ranked by score · younger travellers rank first on a tie</div>
+
+              {/* How the total is calculated */}
+              {V.lbInfo && (
+                <div style={s("margin-bottom:12px;border:1px solid rgba(127,224,192,.3);background:rgba(127,224,192,.08);border-radius:14px;padding:12px 13px;font-size:12.5px;line-height:1.55;color:#dff7ec;")}>
+                  <div style={s("font-family:'Fredoka';font-weight:700;font-size:14px;color:#bff5e2;margin-bottom:5px;")}>How the score works</div>
+                  <div>Each traveller&apos;s score blends their light with their daily habit:</div>
+                  <div style={s("margin:7px 0;text-align:center;font-family:'Fredoka';font-weight:600;color:#f5c451;")}>Score = ✦ Noor + ( 🔥 streak × {V.streakWeight} )</div>
+                  <div style={s("opacity:.85;")}>So every day you keep your streak going adds {V.streakWeight} points — coming back daily climbs the board even faster than Noor alone. On a tie, the younger traveller ranks first.</div>
+                </div>
+              )}
 
               {V.lbBusy && (<div style={s("padding:40px;text-align:center;")}><span className="ipj-spin" style={s("display:inline-block;width:34px;height:34px;border-radius:50%;border:4px solid rgba(127,224,192,.25);border-top-color:#7fe0c0;")}></span></div>)}
 
@@ -1179,10 +1198,10 @@ export default class ProphetsJourney extends React.Component {
                       <span style={s(`flex:0 0 auto;width:30px;text-align:center;font-family:'Fredoka';font-weight:700;font-size:16px;color:${e.rank <= 3 ? "#f5c451" : "rgba(244,238,222,.7)"};`)}>{e.rank <= 3 ? ["🥇", "🥈", "🥉"][e.rank - 1] : ("#" + e.rank)}</span>
                       <span style={s(`flex:0 0 auto;width:40px;height:40px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:22px;border:2px solid ${e.gender === "girl" ? "rgba(245,111,161,.7)" : "rgba(245,196,81,.7)"};background:${e.gender === "girl" ? "rgba(245,111,161,.12)" : "rgba(245,196,81,.12)"};`)}>{e.avatar ? <img src={asset(e.avatar)} alt="" style={s("width:100%;height:100%;object-fit:cover;")} /> : e.icon}</span>
                       <span style={s("flex:1;min-width:0;")}>
-                        <span style={s("display:block;font-family:'Fredoka';font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;")}>{e.handle}{e.isMe ? " (You)" : ""}</span>
-                        <span style={s("display:block;font-size:12px;opacity:.6;")}>{e.completed}/25 lands</span>
+                        <span style={s("display:block;font-family:'Fredoka';font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;")}>{e.name || e.handle}{e.age != null ? <span style={s("opacity:.6;font-weight:500;")}>{" · "}{e.age}</span> : null}{e.isMe ? " (You)" : ""}</span>
+                        <span style={s("display:block;font-size:12px;opacity:.6;")}>{e.completed}/25 lands{e.streak > 0 ? `  ·  🔥 ${e.streak}` : ""}</span>
                       </span>
-                      <span style={s("flex:0 0 auto;display:flex;align-items:center;gap:4px;color:#f5c451;font-family:'Fredoka';font-weight:700;font-size:15px;")}>✦ {e.score}</span>
+                      <span style={s("flex:0 0 auto;display:flex;align-items:center;gap:4px;color:#f5c451;font-family:'Fredoka';font-weight:700;font-size:15px;")}>✦ {e.total}</span>
                     </button>
                   ))}
                 </div>
@@ -1193,8 +1212,8 @@ export default class ProphetsJourney extends React.Component {
                   <div style={s("display:flex;align-items:center;gap:12px;border:1px solid rgba(245,196,81,.5);background:rgba(245,196,81,.12);border-radius:14px;padding:10px 12px;")}>
                     <span style={s("width:30px;text-align:center;font-family:'Fredoka';font-weight:700;font-size:16px;color:#f5c451;")}>#{V.lbData.me.rank}</span>
                     <span style={s("flex:0 0 auto;width:30px;height:30px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:22px;")}>{V.lbData.me.avatar ? <img src={asset(V.lbData.me.avatar)} alt="" style={s("width:100%;height:100%;object-fit:cover;")} /> : V.lbData.me.icon}</span>
-                    <span style={s("flex:1;font-family:'Fredoka';font-weight:600;font-size:15px;")}>{V.lbData.me.handle} (You)</span>
-                    <span style={s("color:#f5c451;font-family:'Fredoka';font-weight:700;")}>✦ {V.lbData.me.score}</span>
+                    <span style={s("flex:1;font-family:'Fredoka';font-weight:600;font-size:15px;")}>{V.lbData.me.name || V.lbData.me.handle}{V.lbData.me.age != null ? <span style={s("opacity:.6;font-weight:500;")}>{" · "}{V.lbData.me.age}</span> : null} (You)</span>
+                    <span style={s("color:#f5c451;font-family:'Fredoka';font-weight:700;")}>✦ {V.lbData.me.total}</span>
                   </div>
                 </div>
               )}
@@ -1204,13 +1223,15 @@ export default class ProphetsJourney extends React.Component {
                 <div onClick={() => V.selectLbEntry(null)} style={s("position:absolute;inset:0;z-index:2;background:rgba(8,5,20,.88);border-radius:22px;display:flex;align-items:center;justify-content:center;padding:20px;")}>
                   <div onClick={(e) => e.stopPropagation()} style={s("width:100%;max-width:300px;text-align:center;background:rgba(24,17,52,.99);border:1px solid rgba(245,196,81,.3);border-radius:18px;padding:22px 18px;")}>
                     <div style={s(`width:84px;height:84px;margin:0 auto 10px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:44px;border:3px solid ${V.lbSelected.gender === "girl" ? "rgba(245,111,161,.8)" : "rgba(245,196,81,.8)"};background:${V.lbSelected.gender === "girl" ? "rgba(245,111,161,.14)" : "rgba(245,196,81,.14)"};`)}>{V.lbSelected.avatar ? <img src={asset(V.lbSelected.avatar)} alt="" style={s("width:100%;height:100%;object-fit:cover;")} /> : V.lbSelected.icon}</div>
-                    <div style={s("font-family:'Fredoka';font-weight:700;font-size:20px;color:#f4eede;")}>{V.lbSelected.handle}</div>
+                    <div style={s("font-family:'Fredoka';font-weight:700;font-size:20px;color:#f4eede;")}>{V.lbSelected.name || V.lbSelected.handle}{V.lbSelected.age != null ? <span style={s("opacity:.6;font-weight:500;font-size:16px;")}>{",  "}{V.lbSelected.age}</span> : null}</div>
                     <div style={s("font-size:13px;opacity:.6;margin-top:2px;")}>Rank #{V.lbSelected.rank}</div>
-                    <div style={s("display:flex;justify-content:center;gap:22px;margin:16px 0;")}>
-                      <div><div style={s("font-family:'Fredoka';font-weight:700;font-size:22px;color:#f5c451;")}>✦ {V.lbSelected.score}</div><div style={s("font-size:11px;opacity:.6;")}>Noor</div></div>
+                    <div style={s("display:flex;justify-content:center;gap:18px;margin:16px 0;flex-wrap:wrap;")}>
+                      <div><div style={s("font-family:'Fredoka';font-weight:700;font-size:22px;color:#f5c451;")}>✦ {V.lbSelected.total}</div><div style={s("font-size:11px;opacity:.6;")}>Score</div></div>
                       <div><div style={s("font-family:'Fredoka';font-weight:700;font-size:22px;color:#bff5e2;")}>{V.lbSelected.completed}/25</div><div style={s("font-size:11px;opacity:.6;")}>Lands</div></div>
+                      <div><div style={s("font-family:'Fredoka';font-weight:700;font-size:22px;color:#ffb86b;")}>🔥 {V.lbSelected.streak}</div><div style={s("font-size:11px;opacity:.6;")}>Streak</div></div>
                     </div>
-                    <div style={s("display:flex;align-items:center;justify-content:center;gap:7px;font-size:12px;opacity:.7;background:rgba(255,255,255,.05);border-radius:10px;padding:9px;")}>🔒 Photo &amp; name kept private</div>
+                    <div style={s("font-size:11.5px;opacity:.55;margin:-6px 0 12px;")}>✦ {V.lbSelected.score} Noor + 🔥 {V.lbSelected.streak} × {V.streakWeight} = {V.lbSelected.total}</div>
+                    <div style={s("display:flex;align-items:center;justify-content:center;gap:7px;font-size:12px;opacity:.7;background:rgba(255,255,255,.05);border-radius:10px;padding:9px;")}>🔒 Photo kept private</div>
                     <button onClick={() => V.selectLbEntry(null)} style={s("cursor:pointer;margin-top:14px;width:100%;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#f4eede;border-radius:12px;padding:10px;font-family:'Fredoka';font-weight:600;")}>Back</button>
                   </div>
                 </div>

@@ -1,4 +1,4 @@
-# Publishing Safar Anbiya to the App Store — WITHOUT a Mac
+# Publishing Safar-e-Anbiya to the App Store — WITHOUT a Mac
 
 Your app is a hosted PWA (`https://safar-anbiya.gennoor.com`). For iOS you wrap it
 in a thin native shell (a `WKWebView` app), exactly like the Android TWA. The only
@@ -45,7 +45,7 @@ Mac build machines for you. You drive everything from your Windows PC + a browse
 3. **Package For Stores → iOS** → fill the fields:
    - **Bundle ID**: `com.gennoor.safaranbiya` (reverse-domain, lowercase, no spaces —
      **write it down, you reuse it everywhere**).
-   - **App name**: `Safar Anbiya`
+   - **App name**: `Safar-e-Anbiya`
    - **URL / Start URL**: `https://safar-anbiya.gennoor.com`
 4. **Download** → unzip. You now have an **Xcode project folder** (Swift source that
    loads your site in a full-screen web view).
@@ -60,13 +60,13 @@ Mac build machines for you. You drive everything from your Windows PC + a browse
 1. **https://developer.apple.com/account** → **Certificates, IDs & Profiles** →
    **Identifiers** → **+**.
 2. Select **App IDs → App** → Continue.
-3. **Description**: `Safar Anbiya`, **Bundle ID**: *Explicit* →
+3. **Description**: `Safar-e-Anbiya`, **Bundle ID**: *Explicit* →
    `com.gennoor.safaranbiya` (must match Step 2 exactly).
 4. Register.
 
 ### 3b. Create the App Store Connect listing record
 1. **https://appstoreconnect.apple.com** → **Apps → + → New App**.
-2. **Platform**: iOS. **Name**: `Safar Anbiya`. **Primary language**: English.
+2. **Platform**: iOS. **Name**: `Safar-e-Anbiya`. **Primary language**: English.
 3. **Bundle ID**: pick `com.gennoor.safaranbiya` from the dropdown.
 4. **SKU**: any unique string, e.g. `safaranbiya-001`.
 5. Create. (You'll fill the listing details later, in Step 8.)
@@ -81,7 +81,7 @@ Codemagic builds from a Git repo.
    ```bash
    git init
    git add .
-   git commit -m "PWABuilder iOS project for Safar Anbiya"
+   git commit -m "PWABuilder iOS project for Safar-e-Anbiya"
    git branch -M main
    git remote add origin https://github.com/<your-user>/safar-anbiya-ios.git
    git push -u origin main
@@ -214,7 +214,7 @@ Put this at the repo root instead of using the UI workflow. Replace the placehol
 ```yaml
 workflows:
   ios-release:
-    name: Safar Anbiya iOS Release
+    name: Safar-e-Anbiya iOS Release
     instance_type: mac_mini_m2
     max_build_duration: 60
     integrations:
@@ -225,7 +225,7 @@ workflows:
         bundle_identifier: com.gennoor.safaranbiya
       vars:
         BUNDLE_ID: "com.gennoor.safaranbiya"
-        XCODE_SCHEME: "Safar Anbiya"   # exact scheme name from the project
+        XCODE_SCHEME: "Safar-e-Anbiya"   # exact scheme name from the project
       xcode: latest
     scripts:
       - name: Set up signing

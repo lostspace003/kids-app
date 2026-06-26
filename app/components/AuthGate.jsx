@@ -33,6 +33,9 @@ export default function AuthGate() {
   // Which inner screen the journey is on ("map" | "stage" | …) so we can hide
   // the floating menu during a story (it would overlap the narration card).
   const [journeyScreen, setJourneyScreen] = useState("map");
+  // Bumped from the hamburger menu to ask the journey to open the leaderboard
+  // (the board lives inside ProphetsJourney; this is a one-way "open" signal).
+  const [lbSignal, setLbSignal] = useState(0);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -130,6 +133,7 @@ export default function AuthGate() {
         childProfile={profile}
         onStageComplete={handleStageComplete}
         onScreenChange={setJourneyScreen}
+        lbOpenSignal={lbSignal}
       />
 
       {journeyScreen !== "stage" && (
@@ -141,6 +145,7 @@ export default function AuthGate() {
         onFeedback={() => setOverlay("feedback")}
         onChangePassword={() => setOverlay("changepw")}
         onContact={() => setOverlay("contact")}
+        onLeaderboard={() => setLbSignal((n) => n + 1)}
         onLogout={logout}
         onLogin={() => setStage("auth")}
       />

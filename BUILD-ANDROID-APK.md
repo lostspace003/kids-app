@@ -1,4 +1,4 @@
-# Turning Safar Anbiya into an Android app (APK → Play Store)
+# Turning Safar-e-Anbiya into an Android app (APK → Play Store)
 
 The web app is live at **https://safar-anbiya.gennoor.com** (Azure). You do **not**
 rewrite it — you wrap the live site in a thin Android shell called a **TWA

@@ -1,6 +1,6 @@
-# Safar Anbiya — Logo & Icon Pack
+# Safar-e-Anbiya — Logo & Icon Pack
 
-Brand mark for **Safar Anbiya · Journey of the Prophets** (safar-anbiya.gennoor.com).
+Brand mark for **Safar-e-Anbiya · Journey of the Prophets** (safar-anbiya.gennoor.com).
 The guiding lantern + eight-pointed star (Noor). Twilight navy & gold.
 
 ## Folders

@@ -1,4 +1,4 @@
-// Minimal service worker for Safar Anbiya. It exists so the site qualifies as
+// Minimal service worker for Safar-e-Anbiya. It exists so the site qualifies as
 // an installable PWA (offline support) — required to clear PWABuilder's
 // "add a service worker" check. It deliberately never caches API/auth
 // responses, and serves page navigations network-first so deployed updates

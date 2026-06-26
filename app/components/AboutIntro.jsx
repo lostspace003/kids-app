@@ -20,7 +20,7 @@ export default function AboutIntro({ authed, onContinue }) {
         <div style={{ textAlign: "center", marginBottom: 14 }}>
           <img src="/brand/svg/emblem-glow.svg" alt="" width={64} height={64} style={{ display: "block", margin: "0 auto 8px" }} />
           <h1 style={{ fontFamily: "Fredoka, sans-serif", color: C.ink, fontSize: 25, margin: 0, fontWeight: 600 }}>
-            Safar <span style={{ color: C.gold }}>Anbiya</span>
+            Safar-e-<span style={{ color: C.gold }}>Anbiya</span>
           </h1>
           <div style={{ fontFamily: "Nunito, sans-serif", fontSize: 12.5, letterSpacing: 3, color: "rgba(244,238,222,.6)", marginTop: 4 }}>
             NABIYON KA SAFAR

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "The Prophets' Journey — a gamified Islamic learning experience for kids, covering all 25 prophets in order.",
+  "description": "Safar-e-Anbiya — a gamified Islamic learning experience for kids, covering all 25 prophets in order.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

@@ -1,8 +1,8 @@
 export default function manifest() {
   return {
     id: "/",
-    name: "Safar Anbiya · Journey of the Prophets",
-    short_name: "Safar Anbiya",
+    name: "Safar-e-Anbiya · Journey of the Prophets",
+    short_name: "Safar-e-Anbiya",
     description:
       "A gamified Islamic learning journey for kids — travel the path of all 25 prophets by the light of your lantern.",
     start_url: "/",
@@ -36,7 +36,7 @@ export default function manifest() {
       {
         name: "Privacy policy",
         short_name: "Privacy",
-        description: "How Safar Anbiya handles your data.",
+        description: "How Safar-e-Anbiya handles your data.",
         url: "/privacy",
         icons: [
           { src: "/brand/png/icon-192.png", sizes: "192x192", type: "image/png" },
@@ -80,14 +80,14 @@ export default function manifest() {
         sizes: "1080x1920",
         type: "image/png",
         form_factor: "narrow",
-        label: "Safar Anbiya — start your journey through the prophets",
+        label: "Safar-e-Anbiya — start your journey through the prophets",
       },
       {
         src: "/brand/png/social-lockup.png",
         sizes: "924x540",
         type: "image/png",
         form_factor: "wide",
-        label: "Safar Anbiya — Journey of the Prophets",
+        label: "Safar-e-Anbiya — Journey of the Prophets",
       },
     ],
   };

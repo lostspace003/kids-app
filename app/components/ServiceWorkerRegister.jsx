@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-// Registers /sw.js after the page loads so Safar Anbiya qualifies as an
+// Registers /sw.js after the page loads so Safar-e-Anbiya qualifies as an
 // installable PWA (and so PWABuilder detects a service worker). Renders nothing.
 export default function ServiceWorkerRegister() {
   useEffect(() => {

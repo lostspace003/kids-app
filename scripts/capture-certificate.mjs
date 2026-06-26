@@ -52,7 +52,7 @@ function certificateHtml({ childName, dateStr, paragraph, avatar, emblem }) {
   .foot{position:absolute;bottom:46px;left:0;right:0;display:flex;justify-content:space-between;padding:0 90px;font-size:14px;color:rgba(244,238,222,.65)}
   </style></head><body><div class="frame"></div><div class="wrap">
     ${emblem ? `<img class="emblem" src="${emblem}"/>` : ""}
-    <div class="brand">SAFAR ANBIYA · JOURNEY OF THE PROPHETS</div>
+    <div class="brand">SAFAR-E-ANBIYA · JOURNEY OF THE PROPHETS</div>
     <h1>Certificate of Completion</h1>
     <div class="sub">Awarded with love and du'a</div>
     ${avatar ? `<img class="avatar" src="${avatar}"/>` : ""}

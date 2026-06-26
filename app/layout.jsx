@@ -3,7 +3,7 @@ import ServiceWorkerRegister from "./components/ServiceWorkerRegister";
 import AdsenseScript from "./components/ads/AdsenseScript";
 
 export const metadata = {
-  title: "Safar Anbiya · Journey of the Prophets",
+  title: "Safar-e-Anbiya · Journey of the Prophets",
   description:
     "A gamified Islamic learning journey for kids — travel the path of all 25 prophets by the light of your lantern.",
   icons: {
@@ -19,7 +19,7 @@ export const metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Safar Anbiya",
+    title: "Safar-e-Anbiya",
   },
 };
 

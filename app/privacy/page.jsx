@@ -3,9 +3,9 @@
 // publicly reachable privacy policy). Plain, readable, brand-themed.
 
 export const metadata = {
-  title: "Privacy Policy · Safar Anbiya",
+  title: "Privacy Policy · Safar-e-Anbiya",
   description:
-    "How Safar Anbiya collects, uses, and protects the information of parents and children.",
+    "How Safar-e-Anbiya collects, uses, and protects the information of parents and children.",
 };
 
 const C = {
@@ -61,7 +61,7 @@ export default function PrivacyPolicy() {
     >
       <article style={{ maxWidth: 760, margin: "0 auto" }}>
         <p style={{ letterSpacing: 3, fontSize: 12, color: C.gold, margin: 0 }}>
-          SAFAR ANBIYA · JOURNEY OF THE PROPHETS
+          SAFAR-E-ANBIYA · JOURNEY OF THE PROPHETS
         </p>
         <h1 style={{ fontFamily: "Georgia, serif", fontSize: 38, margin: "10px 0 4px" }}>
           Privacy Policy
@@ -81,7 +81,7 @@ export default function PrivacyPolicy() {
         >
           <H>Who we are</H>
           <P>
-            Safar Anbiya (&ldquo;Journey of the Prophets&rdquo;) is a gentle,
+            Safar-e-Anbiya (&ldquo;Journey of the Prophets&rdquo;) is a gentle,
             gamified Islamic learning app for children, operated by Gennoor Tech
             Private Limited (&ldquo;we&rdquo;, &ldquo;us&rdquo;). This policy explains what
             information we collect, how we use it, and the choices you have. You can
@@ -242,7 +242,7 @@ export default function PrivacyPolicy() {
 
           <H>Children&rsquo;s privacy</H>
           <P>
-            Safar Anbiya is designed for children but intended to be managed by a
+            Safar-e-Anbiya is designed for children but intended to be managed by a
             parent or guardian, who provides any information about the child. We do
             not knowingly collect more information from children than is needed to
             provide the learning experience, and we do not use children&rsquo;s data

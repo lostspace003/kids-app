@@ -65,7 +65,7 @@ async function generateContent(childName) {
   if (!E.oaEndpoint || !E.oaKey) {
     return {
       paragraph: `${childName} has journeyed, with light and love, through the lives of all twenty-five prophets — learning patience, kindness, and trust in Allah. MashaAllah!`,
-      emailSubject: `MashaAllah ${childName} — your Safar Anbiya certificate`,
+      emailSubject: `MashaAllah ${childName} — your Safar-e-Anbiya certificate`,
       emailIntro: `${childName} has completed the whole Journey of the Prophets — all twenty-five, peace be upon them. We are overjoyed to share in this beautiful milestone.`,
     };
   }
@@ -75,7 +75,7 @@ async function generateContent(childName) {
     headers: { "api-key": E.oaKey, "Content-Type": "application/json" },
     body: JSON.stringify({
       messages: [
-        { role: "system", content: "You write warm, sincere, child-appropriate Islamic congratulatory content for a kids' learning app called Safar Anbiya (Journey of the Prophets). Keep it gentle, joyful, and respectful. Avoid theological rulings. Return STRICT JSON only." },
+        { role: "system", content: "You write warm, sincere, child-appropriate Islamic congratulatory content for a kids' learning app called Safar-e-Anbiya (Journey of the Prophets). Keep it gentle, joyful, and respectful. Avoid theological rulings. Return STRICT JSON only." },
         { role: "user", content: `A child named "${childName}" has completed the journey through all 25 prophets (peace be upon them). Return a JSON object with exactly these keys: "paragraph" (2-3 warm sentences for a printed certificate, naming the child), "emailSubject" (short, warm), "emailIntro" (1-2 warm plain-text sentences for the start of a congratulatory email to the family, naming the child; no HTML).` },
       ],
       max_completion_tokens: 4000,
@@ -108,7 +108,7 @@ function certificateHtml({ childName, age, dateStr, paragraph, avatar, emblem })
   .foot{position:absolute;bottom:46px;left:0;right:0;display:flex;justify-content:space-between;padding:0 90px;font-size:14px;color:rgba(244,238,222,.65)}
   </style></head><body><div class="frame"></div><div class="wrap">
     ${emblem ? `<img class="emblem" src="${emblem}"/>` : ""}
-    <div class="brand">SAFAR ANBIYA · JOURNEY OF THE PROPHETS</div>
+    <div class="brand">SAFAR-E-ANBIYA · JOURNEY OF THE PROPHETS</div>
     <h1>Certificate of Completion</h1>
     <div class="sub">Awarded with love and du'a</div>
     ${avatar ? `<img class="avatar" src="${avatar}"/>` : ""}
@@ -131,8 +131,8 @@ function buildEmailHtml(childName, intro) {
    <tr><td align="center">
     <table width="600" cellpadding="0" cellspacing="0" role="presentation" style="max-width:600px;width:100%;background:#140e2e;border:1px solid rgba(245,196,81,.3);border-radius:18px;overflow:hidden;font-family:Arial,Helvetica,sans-serif">
       <tr><td align="center" style="padding:30px 28px 6px">
-        <img src="https://safar-anbiya.gennoor.com/brand/png/emblem-256.png" width="74" height="74" alt="Safar Anbiya" style="display:block"/>
-        <div style="color:#f5c451;letter-spacing:2px;font-size:12px;margin-top:10px">SAFAR ANBIYA &middot; JOURNEY OF THE PROPHETS</div>
+        <img src="https://safar-anbiya.gennoor.com/brand/png/emblem-256.png" width="74" height="74" alt="Safar-e-Anbiya" style="display:block"/>
+        <div style="color:#f5c451;letter-spacing:2px;font-size:12px;margin-top:10px">SAFAR-E-ANBIYA &middot; JOURNEY OF THE PROPHETS</div>
       </td></tr>
       <tr><td style="padding:6px 34px 4px">
         <h1 style="color:#f4eede;font-size:25px;text-align:center;margin:16px 0 8px">MashaAllah, ${childName}! 🌙</h1>
@@ -147,7 +147,7 @@ function buildEmailHtml(childName, intro) {
         </div>
       </td></tr>
       <tr><td align="center" style="padding:18px 28px 26px;border-top:1px solid rgba(245,196,81,.15)">
-        <div style="color:#8f88a0;font-size:12px">Safar Anbiya &middot; <a href="https://safar-anbiya.gennoor.com" style="color:#f5c451;text-decoration:none">safar-anbiya.gennoor.com</a> &middot; admin@gennoor.com</div>
+        <div style="color:#8f88a0;font-size:12px">Safar-e-Anbiya &middot; <a href="https://safar-anbiya.gennoor.com" style="color:#f5c451;text-decoration:none">safar-anbiya.gennoor.com</a> &middot; admin@gennoor.com</div>
       </td></tr>
     </table>
    </td></tr>

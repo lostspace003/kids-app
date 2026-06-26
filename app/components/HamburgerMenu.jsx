@@ -7,7 +7,7 @@ import { C } from "./ui";
 // change password, contact, and login/logout (contextual on auth state).
 export default function HamburgerMenu({
   authed, childName, avatarUrl,
-  onUpdate, onFeedback, onChangePassword, onContact, onLogin, onLogout,
+  onUpdate, onFeedback, onChangePassword, onContact, onLogin, onLogout, onLeaderboard,
 }) {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
@@ -15,6 +15,7 @@ export default function HamburgerMenu({
 
   const items = [];
   if (authed) {
+    items.push(["🏆", "Leaderboard", act(onLeaderboard)]);
     items.push(["🧒", "Update profile", act(onUpdate)]);
     items.push(["⭐", "Give feedback", act(onFeedback)]);
     items.push(["🔑", "Change password", act(onChangePassword)]);
@@ -39,7 +40,7 @@ export default function HamburgerMenu({
                 <div style={{ fontFamily: "Fredoka, sans-serif", color: C.ink, fontWeight: 600, fontSize: 17 }}>
                   {authed ? (childName || "Menu") : "Menu"}
                 </div>
-                <div style={{ color: C.dim, fontSize: 12.5 }}>Prophets' Journey</div>
+                <div style={{ color: C.dim, fontSize: 12.5 }}>Safar-e-Anbiya</div>
               </div>
               <button onClick={close} aria-label="Close" style={closeBtn}>✕</button>
             </div>

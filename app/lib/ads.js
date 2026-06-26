@@ -1,4 +1,4 @@
-// Web-ads configuration for Safar Anbiya.
+// Web-ads configuration for Safar-e-Anbiya.
 //
 // Ads are Google AdSense, shown ONLY to real browser visitors of the website —
 // never inside the installed app/TWA. AdSense's program policies forbid showing

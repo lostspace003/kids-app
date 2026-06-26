@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef } from "react";
 import { playWarmChime, primeChime } from "../lib/chime";
 
-// First page — a faithful port of the Safar Anbiya brand splash:
+// First page — a faithful port of the Safar-e-Anbiya brand splash:
 // Bismillah, the guiding-lantern emblem, the Arabic + Latin wordmark, a
 // tagline, and a "Let's begin" button. A warm chime plays on launch/tap.
 export default function SafarSplash({ onBegin }) {
@@ -64,7 +64,7 @@ export default function SafarSplash({ onBegin }) {
         </div>
 
         <div style={{ marginTop: 30, animation: "saFloat 5s ease-in-out infinite" }}>
-          <img src="/brand/svg/emblem-glow.svg" alt="Safar Anbiya" width={160} height={160}
+          <img src="/brand/svg/emblem-glow.svg" alt="Safar-e-Anbiya" width={160} height={160}
             style={{ display: "block", animation: "saGlow 3.6s ease-in-out infinite" }} />
         </div>
 
@@ -73,7 +73,7 @@ export default function SafarSplash({ onBegin }) {
         </div>
 
         <div style={{ fontFamily: "Fredoka, sans-serif", fontWeight: 600, fontSize: "clamp(40px,9vw,62px)", color: "#f4eede", lineHeight: 1, marginTop: 8, letterSpacing: ".5px", animation: "saRise .8s .15s ease both" }}>
-          Safar <span style={{ color: "#f5c451" }}>Anbiya</span>
+          Safar-e-<span style={{ color: "#f5c451" }}>Anbiya</span>
         </div>
 
         <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "clamp(12px,3vw,16px)", letterSpacing: 5, color: "rgba(244,238,222,.6)", marginTop: 14, animation: "saRise .8s .2s ease both" }}>

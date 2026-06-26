@@ -1,4 +1,4 @@
-# Google Play store listing — Safar Anbiya
+# Google Play store listing — Safar-e-Anbiya
 
 Copy-paste fields for the Play Console **Main store listing**, plus the
 **Data safety** and **App content** answers you'll be asked for.
@@ -7,9 +7,9 @@ Copy-paste fields for the Play Console **Main store listing**, plus the
 
 ## App title  (max 30 chars)
 ```
-Safar Anbiya: Prophets
+Safar-e-Anbiya: Prophets
 ```
-*(22 chars. Alternative if you prefer: `Safar Anbiya – Prophets` = 23.)*
+*(24 chars. Alternative if you prefer: `Safar-e-Anbiya – Prophets` = 25.)*
 
 ## Short description  (max 80 chars)
 ```
@@ -19,7 +19,7 @@ A gentle, gamified journey through all 25 prophets — Islamic stories for kids.
 
 ## Full description  (max 4000 chars)
 ```
-Safar Anbiya — Journey of the Prophets is a gentle, gamified Islamic learning
+Safar-e-Anbiya — Journey of the Prophets is a gentle, gamified Islamic learning
 app that walks children through the lives of all 25 prophets (peace be upon
 them), one beautiful stop at a time.
 
@@ -49,7 +49,7 @@ MADE FOR FAMILIES
 • A calm, ad-free space — no third-party ads and no cross-app tracking.
 • Personal touch — give your child a cartoon avatar to guide their journey.
 
-Safar Anbiya turns timeless stories into a joyful habit — helping children grow
+Safar-e-Anbiya turns timeless stories into a joyful habit — helping children grow
 in faith, kindness, and knowledge, at their own pace.
 
 "Rabbi zidni 'ilma — My Lord, increase me in knowledge." (Qur'an 20:114)

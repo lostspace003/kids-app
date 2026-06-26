@@ -1,12 +1,34 @@
 // ---------------------------------------------------------------------------
-// Child-safe, pseudonymous leaderboard logic. Shared by the API route and the
-// client UI, so it must stay free of server/browser-only APIs.
+// Child-safe leaderboard logic. Shared by the API route and the client UI, so
+// it must stay free of server/browser-only APIs.
 //
-// SAFETY: nothing here exposes a child's real name, photo, date of birth, age,
-// or country. Each child is shown as a deterministic fun ICON + a generated
-// HANDLE, both derived from their (opaque) userId. DOB is used ONLY as a hidden
-// ranking tiebreaker on the server and is never returned to clients.
+// SAFETY: a child's first name and age are shown publicly; their PHOTO, surname,
+// full date of birth, and country are never exposed. The fun ICON + generated
+// HANDLE remain as a fallback when no name is on file. The full DOB is used only
+// server-side (for age + the youngest-first tiebreaker) and is never returned.
+//
+// RANKING: entries are ranked by a TOTAL that blends cumulative Noor with the
+// day-streak: total = noor + streak * STREAK_WEIGHT. The 'i' info icon in the UI
+// explains this to families.
 // ---------------------------------------------------------------------------
+
+// How many points each day of the current 🔥 streak adds to the ranking total.
+export const STREAK_WEIGHT = 10;
+
+// Ranking total = cumulative Noor + a bonus for the active day-streak.
+export function totalScore(noor = 0, streak = 0) {
+  return (Number(noor) || 0) + (Number(streak) || 0) * STREAK_WEIGHT;
+}
+
+// Public first name only: first whitespace-separated token of the child's name,
+// capitalised, capped in length. Surnames are intentionally dropped. Returns ""
+// when no usable name is on file so callers can fall back to the handle.
+export function firstNameOf(childName) {
+  const tok = String(childName || "").trim().split(/\s+/)[0] || "";
+  const clean = tok.replace(/[^\p{L}\p{M}'-]/gu, "").slice(0, 20);
+  if (!clean) return "";
+  return clean.charAt(0).toUpperCase() + clean.slice(1);
+}
 
 // Fun mascot icons, split into boy/girl pools (~50 each ≈ 100 total). They are
 // wholesome animals / nature / space symbols — never a real photo.
@@ -165,23 +187,29 @@ export function ageYears(dob) {
 }
 
 // Build the public leaderboard.
-//   rows: [{ userId, gender, dob, score, completed }]
+//   rows: [{ userId, gender, dob, childName, score, streak, completed }]
 //   meId: the requesting user's id (to flag/return their own row)
 // Returns { entries:[publicEntry...], me: publicEntry|null }, where publicEntry
-// is { rank, handle, icon, gender, score, completed, isMe } — NO name/dob/age.
+// is { rank, name, age, handle, icon, gender, score, streak, total, completed,
+// isMe }. The child's PHOTO and surname are never included.
 export function buildLeaderboard(rows, meId = null, limit = 200) {
   const ranked = rows
-    .map((r) => ({ ...r, _age: ageYears(r.dob), _dob: r.dob ? new Date(r.dob).getTime() : -Infinity }))
+    .map((r) => ({
+      ...r,
+      _total: totalScore(r.score, r.streak),
+      _age: ageYears(r.dob),
+      _dob: r.dob ? new Date(r.dob).getTime() : -Infinity,
+    }))
     .sort((a, b) =>
-      b.score - a.score ||      // higher cumulative achievement first
+      b._total - a._total ||    // higher blended total (Noor + streak bonus) first
       b._dob - a._dob ||        // tie → youngest (most recent DOB) first
       String(a.userId).localeCompare(String(b.userId)) // stable
     );
 
-  // Competition ranking: identical (score AND whole-year age) share a rank.
+  // Competition ranking: identical (total AND whole-year age) share a rank.
   let prev = null;
   ranked.forEach((e, i) => {
-    if (prev && e.score === prev.score && e._age === prev._age) e.rank = prev.rank;
+    if (prev && e._total === prev._total && e._age === prev._age) e.rank = prev.rank;
     else e.rank = i + 1;
     prev = e;
   });
@@ -192,13 +220,18 @@ export function buildLeaderboard(rows, meId = null, limit = 200) {
     // have one. Older children, and anyone on a default avatar, show the icon.
     // Real photos are never included here.
     const showAvatar = !!e.avatar && ageAtLastJune1(e.dob) <= 10;
+    const age = ageYears(e.dob);
     return {
       rank: e.rank,
-      handle: normalizeHandle(e.handle) || id.handle, // custom (edited) wins
+      name: firstNameOf(e.childName) || null, // first name only; never the surname
+      age: age >= 0 && age < 120 ? age : null, // null when DOB unknown/invalid
+      handle: normalizeHandle(e.handle) || id.handle, // fallback identity
       icon: id.icon,
       avatar: showAvatar ? e.avatar : null,
       gender: e.gender === "girl" ? "girl" : "boy",
       score: e.score,
+      streak: Number(e.streak) || 0,
+      total: e._total,
       completed: e.completed || 0,
       isMe: meId != null && e.userId === meId,
     };

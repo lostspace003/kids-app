@@ -50,7 +50,7 @@ html, body { margin: 0; padding: 0; background: #0c0820; }
 @keyframes ipjSpin { to { transform: rotate(360deg) } }
 .ipj-spin { animation: ipjSpin 1s linear infinite; }
 
-/* Safar Anbiya splash (first page) animations. */
+/* Safar-e-Anbiya splash (first page) animations. */
 @keyframes saTwinkle { 0%,100% { opacity: .2 } 50% { opacity: 1 } }
 @keyframes saFloat { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-8px) } }
 @keyframes saGlow { 0%,100% { filter: drop-shadow(0 0 14px rgba(245,196,81,.45)) } 50% { filter: drop-shadow(0 0 30px rgba(245,196,81,.8)) } }
