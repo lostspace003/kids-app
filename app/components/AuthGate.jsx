@@ -30,6 +30,9 @@ export default function AuthGate() {
   const [stageFeedback, setStageFeedback] = useState(null); // { stage } when a stage just ended
   // Bumped to remount the journey after a profile edit so name/gender/avatar refresh.
   const [journeyKey, setJourneyKey] = useState(0);
+  // Which inner screen the journey is on ("map" | "stage" | …) so we can hide
+  // the floating menu during a story (it would overlap the narration card).
+  const [journeyScreen, setJourneyScreen] = useState("map");
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -96,7 +99,18 @@ export default function AuthGate() {
       </>
     );
   if (stage === "auth")
-    return <AuthFlow onAuthed={onAuthed} />;
+    return <AuthFlow onAuthed={onAuthed} onGuest={() => setStage("guest")} />;
+  // Guest preview: one free story (Prophet 1), no saving, then a login prompt.
+  if (stage === "guest")
+    return (
+      <ProphetsJourney
+        account={null}
+        childProfile={{ childName: "Hamza", gender: "boy" }}
+        guest={true}
+        onRequestLogin={() => setStage("auth")}
+        onStageComplete={() => {}}
+      />
+    );
   if (stage === "profile")
     return (
       <ProfileSetup
@@ -115,8 +129,10 @@ export default function AuthGate() {
         account={me?.user || null}
         childProfile={profile}
         onStageComplete={handleStageComplete}
+        onScreenChange={setJourneyScreen}
       />
 
+      {journeyScreen !== "stage" && (
       <HamburgerMenu
         authed={!!me?.user}
         childName={profile?.childName}
@@ -128,6 +144,7 @@ export default function AuthGate() {
         onLogout={logout}
         onLogin={() => setStage("auth")}
       />
+      )}
 
       {overlay === "update" && (
         <UpdateProfileModal

@@ -12,6 +12,13 @@ import { startAvatarJob } from "@/app/lib/server/avatar-job.js";
 import { moderateImage } from "@/app/lib/server/moderation.js";
 import { json, error } from "@/app/lib/server/http.js";
 import { publicProfile } from "@/app/api/auth/me/route.js";
+import { normalizeHandle, publicIdentity, isOffensiveHandle } from "@/app/lib/leaderboard.js";
+
+// A profile's effective leaderboard handle: the custom one if set, else the
+// deterministic generated one. Used to keep handles unique when editing.
+function effectiveHandle(p) {
+  return normalizeHandle(p.handle) || publicIdentity(p.userId, p.gender).handle;
+}
 
 // Screen a photo; if it fails, flag the user, block the email, end the session.
 async function rejectAndBan(user, reason) {
@@ -76,8 +83,11 @@ export async function POST(req) {
     });
     startAvatarJob(user.id, buf, contentType);
   } else {
-    // No photo: assign a random default traveller avatar (can upload later).
-    const def = Math.random() < 0.5 ? "/hamza.webp" : "/huzaifa.webp";
+    // No photo: assign a default traveller avatar (can still upload one later).
+    // Girls get Hana; boys get a random of Hamza / Huzaifa.
+    const def = gender === "girl"
+      ? "/hana.webp"
+      : (Math.random() < 0.5 ? "/hamza.webp" : "/huzaifa.webp");
     profile = await db.upsertProfile(user.id, {
       childName, dob, country, gender,
       photoKey: null, avatarKey: null, avatarSource: "default",
@@ -118,6 +128,16 @@ export async function PATCH(req) {
   if (body.gender != null) {
     if (!GENDERS.has(body.gender)) return error("Please choose boy or girl.");
     patch.gender = body.gender;
+  }
+  if (body.handle != null) {
+    if (isOffensiveHandle(body.handle)) return error("Please choose a friendly handle.");
+    const h = normalizeHandle(body.handle);
+    if (!h) return error("Handle must be 3–20 letters or numbers.");
+    // Enforce uniqueness across all other profiles' effective handles.
+    const all = await db.getAllProfiles();
+    const taken = all.some((p) => p.userId !== user.id && effectiveHandle(p) === h);
+    if (taken) return error("That handle is taken — please pick another.", 409);
+    patch.handle = h;
   }
   // Note: photoKey / avatarKey / email are intentionally never updated here.
   patch.updatedAt = new Date().toISOString();

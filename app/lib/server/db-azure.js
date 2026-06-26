@@ -44,6 +44,7 @@ IF OBJECT_ID('dbo.analytics','U') IS NULL CREATE TABLE dbo.analytics (
   payload NVARCHAR(MAX), createdAt NVARCHAR(40));
 IF COL_LENGTH('dbo.profiles','avatarSource') IS NULL ALTER TABLE dbo.profiles ADD avatarSource NVARCHAR(20);
 IF COL_LENGTH('dbo.profiles','defaultAvatar') IS NULL ALTER TABLE dbo.profiles ADD defaultAvatar NVARCHAR(80);
+IF COL_LENGTH('dbo.profiles','handle') IS NULL ALTER TABLE dbo.profiles ADD handle NVARCHAR(24);
 IF OBJECT_ID('dbo.blocked_emails','U') IS NULL CREATE TABLE dbo.blocked_emails (
   email NVARCHAR(256) PRIMARY KEY, reason NVARCHAR(200), createdAt NVARCHAR(40));
 IF COL_LENGTH('dbo.users','flagged') IS NULL ALTER TABLE dbo.users ADD flagged BIT NOT NULL DEFAULT 0;
@@ -103,10 +104,11 @@ export const dbAzure = {
       .input("ak", p.avatarKey ?? null).input("as", p.avatarStatus ?? null)
       .input("ca", p.createdAt ?? null).input("ua", p.updatedAt ?? null).input("ra", p.avatarReadyAt ?? null)
       .input("asrc", p.avatarSource ?? null).input("dav", p.defaultAvatar ?? null)
+      .input("hd", p.handle ?? null)
       .query(`MERGE dbo.profiles AS t USING (SELECT @u AS userId) AS s ON t.userId=s.userId
-        WHEN MATCHED THEN UPDATE SET childName=@cn,dob=@dob,country=@co,gender=@g,photoKey=@pk,avatarKey=@ak,avatarStatus=@as,createdAt=@ca,updatedAt=@ua,avatarReadyAt=@ra,avatarSource=@asrc,defaultAvatar=@dav
-        WHEN NOT MATCHED THEN INSERT (userId,childName,dob,country,gender,photoKey,avatarKey,avatarStatus,createdAt,updatedAt,avatarReadyAt,avatarSource,defaultAvatar)
-        VALUES (@u,@cn,@dob,@co,@g,@pk,@ak,@as,@ca,@ua,@ra,@asrc,@dav);`);
+        WHEN MATCHED THEN UPDATE SET childName=@cn,dob=@dob,country=@co,gender=@g,photoKey=@pk,avatarKey=@ak,avatarStatus=@as,createdAt=@ca,updatedAt=@ua,avatarReadyAt=@ra,avatarSource=@asrc,defaultAvatar=@dav,handle=@hd
+        WHEN NOT MATCHED THEN INSERT (userId,childName,dob,country,gender,photoKey,avatarKey,avatarStatus,createdAt,updatedAt,avatarReadyAt,avatarSource,defaultAvatar,handle)
+        VALUES (@u,@cn,@dob,@co,@g,@pk,@ak,@as,@ca,@ua,@ra,@asrc,@dav,@hd);`);
     return p;
   },
 
@@ -149,6 +151,22 @@ export const dbAzure = {
         WHEN MATCHED THEN UPDATE SET data=@d
         WHEN NOT MATCHED THEN INSERT (userId,data) VALUES (@u,@d);`);
     return data;
+  },
+
+  // ---- leaderboard feed (all profiles + all progress) ----
+  async getAllProfiles() {
+    const pool = await getPool();
+    const r = await pool.request().query("SELECT userId, gender, dob FROM dbo.profiles");
+    return r.recordset;
+  },
+  async getAllProgress() {
+    const pool = await getPool();
+    const r = await pool.request().query("SELECT userId, data FROM dbo.progress");
+    return r.recordset.map((row) => {
+      let data = {};
+      try { data = JSON.parse(row.data || "{}"); } catch {}
+      return { userId: row.userId, data };
+    });
   },
 
   // ---- feedback / analytics ----

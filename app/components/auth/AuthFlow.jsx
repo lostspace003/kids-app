@@ -16,7 +16,8 @@ async function postJson(url, body) {
 }
 
 // mode: "login" | "signup" | "otp". onAuthed({ hasProfile }) fires on success.
-export default function AuthFlow({ onAuthed }) {
+// onGuest (optional) lets a visitor preview one story before signing in.
+export default function AuthFlow({ onAuthed, onGuest }) {
   const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -139,6 +140,18 @@ export default function AuthFlow({ onAuthed }) {
             {isSignup ? "Log in" : "Create one"}
           </LinkBtn>
         </div>
+
+        {onGuest && (
+          <>
+            <div style={dividerStyle}><span style={dividerTextStyle}>or</span></div>
+            <button type="button" onClick={onGuest} style={guestBtnStyle}>
+              👀 Just see a story first
+            </button>
+            <div style={{ textAlign: "center", marginTop: 8, color: C.dim, fontSize: 12.5 }}>
+              Try Prophet 1 free — log in to continue and earn Noor.
+            </div>
+          </>
+        )}
       </Card>
     </Screen>
   );
@@ -152,4 +165,19 @@ const noticeStyle = {
   padding: "10px 12px",
   fontSize: 14,
   marginBottom: 14,
+};
+
+const dividerStyle = {
+  display: "flex", alignItems: "center", justifyContent: "center",
+  margin: "18px 0 12px", borderTop: "1px solid rgba(245,196,81,.18)", position: "relative",
+};
+const dividerTextStyle = {
+  position: "absolute", top: -10, background: C.bg || "#140e2e",
+  padding: "0 10px", color: C.dim, fontSize: 12, letterSpacing: 1,
+};
+const guestBtnStyle = {
+  width: "100%", cursor: "pointer", borderRadius: 14, padding: "13px",
+  fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 16,
+  color: "#f4eede", background: "rgba(245,196,81,.10)",
+  border: "1px solid rgba(245,196,81,.4)",
 };

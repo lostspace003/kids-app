@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import Cropper from "react-easy-crop";
 import getCroppedBlob from "../../lib/cropImage";
 import { Card, Field, Primary, ErrorNote, inputStyle, C } from "../ui";
@@ -14,11 +14,42 @@ export default function UpdateProfileModal({ profile, email, onClose, onSaved })
   const [dob, setDob] = useState(profile?.dob || "");
   const [country, setCountry] = useState(profile?.country || "");
   const [gender, setGender] = useState(profile?.gender || "boy");
+  const [handle, setHandle] = useState(profile?.handle || "");
+  const [suggestions, setSuggestions] = useState([]);
+  // handleStatus: "" | "checking" | "ok" | "taken" | "invalid"
+  const [handleStatus, setHandleStatus] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
 
   const photoLocked = !!profile?.photoLocked;
+
+  // Fetch fresh handle suggestions (Islamic-history names + number).
+  const loadSuggestions = useCallback(() => {
+    fetch("/api/profile/handle")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d && setSuggestions(d.suggestions || []))
+      .catch(() => {});
+  }, []);
+  useEffect(() => { loadSuggestions(); }, [loadSuggestions]);
+
+  // Live availability check (debounced) as the parent types their own handle.
+  useEffect(() => {
+    const h = handle.trim();
+    if (!h || h === (profile?.handle || "")) { setHandleStatus(""); return; }
+    if (h.length < 3) { setHandleStatus("invalid"); return; }
+    setHandleStatus("checking");
+    const t = setTimeout(() => {
+      fetch("/api/profile/handle?check=" + encodeURIComponent(h))
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (!d || !d.valid) return setHandleStatus("invalid");
+          setHandleStatus(d.available ? "ok" : "taken");
+        })
+        .catch(() => setHandleStatus(""));
+    }, 400);
+    return () => clearTimeout(t);
+  }, [handle, profile]);
 
   // optional photo (only when not yet locked)
   const [rawSrc, setRawSrc] = useState(null);
@@ -54,7 +85,7 @@ export default function UpdateProfileModal({ profile, email, onClose, onSaved })
       const res = await fetch("/api/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ childName, dob, country, gender }),
+        body: JSON.stringify({ childName, dob, country, gender, handle }),
       });
       let d = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(d.error || "Could not save changes.");
@@ -133,6 +164,53 @@ export default function UpdateProfileModal({ profile, email, onClose, onSaved })
             </div>
           </Field>
 
+          <Field label="Leaderboard handle" hint="Shown on the leaderboard (lowercase). Real name & photo stay private. Tap a suggestion or type your own.">
+            <input
+              style={{
+                ...inputStyle,
+                borderColor: handleStatus === "taken" || handleStatus === "invalid" ? "#e08a8a"
+                  : handleStatus === "ok" ? "#7fe0c0" : inputStyle.borderColor,
+              }}
+              value={handle}
+              maxLength={20}
+              placeholder="e.g. khwarizmi47"
+              onChange={(e) => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ""))}
+            />
+            <div style={{ minHeight: 16, marginTop: 5, fontSize: 12 }}>
+              {handleStatus === "checking" && <span style={{ color: C.dim }}>Checking…</span>}
+              {handleStatus === "ok" && <span style={{ color: "#7fe0c0" }}>✓ Available</span>}
+              {handleStatus === "taken" && <span style={{ color: "#e08a8a" }}>✗ Taken — try another or pick a suggestion below</span>}
+              {handleStatus === "invalid" && <span style={{ color: "#e08a8a" }}>3–20 lowercase letters or numbers</span>}
+            </div>
+            {/* Auto-suggestions: tap an available one; taken ones are greyed out. */}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginTop: 6 }}>
+              {suggestions.map((s) => (
+                <button
+                  key={s.handle}
+                  type="button"
+                  disabled={!s.available}
+                  onClick={() => s.available && setHandle(s.handle)}
+                  title={s.available ? "Use this handle" : "Already taken"}
+                  style={{
+                    cursor: s.available ? "pointer" : "not-allowed",
+                    fontFamily: "Fredoka, sans-serif", fontSize: 12.5,
+                    padding: "5px 10px", borderRadius: 999,
+                    border: `1px solid ${s.available ? C.line : "rgba(255,255,255,.08)"}`,
+                    background: s.available ? "rgba(245,196,81,.10)" : "rgba(255,255,255,.03)",
+                    color: s.available ? C.ink : "rgba(244,238,222,.35)",
+                    textDecoration: s.available ? "none" : "line-through",
+                  }}
+                >
+                  {s.handle}
+                </button>
+              ))}
+              <button type="button" onClick={loadSuggestions} title="More suggestions"
+                style={{ cursor: "pointer", fontFamily: "Fredoka, sans-serif", fontSize: 12.5, padding: "5px 10px", borderRadius: 999, border: `1px solid ${C.line}`, background: "transparent", color: C.gold }}>
+                🎲 more
+              </button>
+            </div>
+          </Field>
+
           {/* Photo: locked once a real one exists; otherwise optional upload. */}
           <Field label="Photo">
             {photoLocked ? (
@@ -156,7 +234,7 @@ export default function UpdateProfileModal({ profile, email, onClose, onSaved })
           </Field>
 
           <div style={{ marginTop: 6 }}>
-            <Primary onClick={save} disabled={busy || !childName.trim() || !dob || !country}>
+            <Primary onClick={save} disabled={busy || !childName.trim() || !dob || !country || handleStatus === "taken" || handleStatus === "invalid" || handleStatus === "checking"}>
               {msg || (busy ? "Saving…" : photoBlob ? "Save & create avatar" : "Save changes")}
             </Primary>
           </div>

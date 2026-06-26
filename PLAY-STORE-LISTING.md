@@ -35,6 +35,10 @@ WHAT'S INSIDE
 • Gentle choices — little "what would you do?" moments that nurture good akhlaq.
 • Recap quizzes — simple questions that help the lessons stick.
 • Rewards that delight — collect Noor, earn badges, and light up each new land.
+• A friendly leaderboard — see how you rank by Noor. It's privacy-first: children
+  appear only as a fun icon and a playful handle, never a real name or photo.
+• Try before you sign in — preview a story as a guest, then create a free parent
+  account to continue and save progress.
 • A Certificate of Completion — finish all 25 prophets and receive a personalised
   certificate to print and treasure.
 • Choose your language — listen in English or Urdu (male or female narration).
@@ -96,6 +100,13 @@ The app DOES collect personal data, so answer "Yes" and declare:
 | Photos | Yes | App functionality | No | Optional; used to generate the avatar |
 | App activity (progress) | Yes | App functionality | No | Prophets completed, badges, Noor |
 | App info & performance / Device IDs | Only if applicable | — | — | Standard logs only; no analytics/ads SDKs |
+
+**Leaderboard note (no extra data shared):** the leaderboard is **pseudonymous** —
+it shows only a generated handle + fun icon + score. No child name, photo, age,
+DOB, or country is shown to other users. DOB is used only server-side as a hidden
+tie-breaker. Guest "preview a story" mode creates no account and stores no
+personal data. So this feature does **not** change the data types collected above
+and is **not** "sharing" personal data in the Data-safety sense.
 
 Also declare:
 - **Data is encrypted in transit:** Yes (HTTPS).

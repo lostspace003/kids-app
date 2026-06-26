@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/app/lib/server/session.js";
 import { db } from "@/app/lib/server/db.js";
 import { mediaUrl } from "@/app/lib/server/storage.js";
 import { json, publicUser } from "@/app/lib/server/http.js";
+import { normalizeHandle, publicIdentity } from "@/app/lib/leaderboard.js";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +13,7 @@ export function publicProfile(p) {
   // A real uploaded photo (avatarSource "photo") locks the photo. Otherwise the
   // child uses a default traveller avatar, and can still upload one later.
   const isPhoto = p.avatarSource === "photo" || !!p.photoKey;
-  const fallbackDefault = p.defaultAvatar || "/huzaifa.webp";
+  const fallbackDefault = p.defaultAvatar || (p.gender === "girl" ? "/hana.webp" : "/huzaifa.webp");
   return {
     childName: p.childName,
     dob: p.dob,
@@ -25,6 +26,8 @@ export function publicProfile(p) {
     // While a photo avatar is still generating, fall back to the photo itself.
     avatarUrl: isPhoto ? (mediaUrl(p.avatarKey) || mediaUrl(p.photoKey)) : fallbackDefault,
     defaultAvatar: isPhoto ? null : fallbackDefault,
+    // Public, editable leaderboard handle (custom if set, else generated).
+    handle: normalizeHandle(p.handle) || publicIdentity(p.userId, p.gender).handle,
     createdAt: p.createdAt,
     updatedAt: p.updatedAt,
   };

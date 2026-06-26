@@ -90,7 +90,9 @@ export default class ProphetsJourney extends React.Component {
     let lang0 = "ur"; try { const sv = localStorage.getItem("ipj_lang_v2"); if (sv) lang0 = sv; } catch (e) {}
     // Urdu narration voice: "male" (ur-PK-Asad) or "female" (ur-PK-Uzma).
     let voice0 = "male"; try { const sv = localStorage.getItem("ipj_voice"); if (sv === "female" || sv === "male") voice0 = sv; } catch (e) {}
-    let vol0 = 1; try { const sv = localStorage.getItem("ipj_volume"); if (sv != null) vol0 = Math.min(2, Math.max(0, parseFloat(sv))); } catch (e) {}
+    // Sound always starts at maximum (2× gain). The slider can still lower it
+    // during a session, but every load defaults to full volume.
+    const vol0 = 2;
 
     // When a logged-in child profile is supplied, the traveller IS that child:
     // inject a synthetic "me" profile (their Ghibli avatar as the medallion) and
@@ -117,18 +119,24 @@ export default class ProphetsJourney extends React.Component {
       celebrate: 0,                       // bump to fire confetti
       langPrompt: null,                   // prophet id awaiting a language choice
       progress: { completed: [], noor: 0, stars: {}, earned: {}, streak: 0, lastDay: null },
+      lbOpen: false, lbBusy: false, lbData: null, lbSelected: null, // leaderboard
     };
   }
 
+  get isGuest() { return !!this.props.guest; }
+
   componentDidMount() {
+    this._lastScreen = this.state.screen;
+    if (this.props.onScreenChange) this.props.onScreenChange(this.state.screen);
     if (this.synth && this.synth.onvoiceschanged !== undefined) { this.synth.onvoiceschanged = () => {}; }
     // Load the pre-generated audio manifest; narration falls back to the
     // browser voice for any clip not present.
     if (typeof fetch !== "undefined") {
       fetch(asset("/audio/manifest.json")).then((r) => (r.ok ? r.json() : null)).then((m) => { this.manifest = m || {}; }).catch(() => { this.manifest = {}; });
     }
-    // For a logged-in child, progress lives server-side (per account).
-    if (this.props.childProfile) this.loadServerProgress();
+    // For a logged-in child, progress lives server-side (per account). Guests
+    // get a clean local-only run that is never persisted.
+    if (this.props.childProfile && !this.isGuest) this.loadServerProgress();
 
     // Phones suspend the audio context when a notification plays or the user
     // leaves the browser, which silently stops narration. On returning, resume
@@ -162,6 +170,12 @@ export default class ProphetsJourney extends React.Component {
   }
   componentDidUpdate() {
     const st = this.state;
+    // Tell the host (AuthGate) which screen we're on so it can hide app chrome
+    // (e.g. the menu button) during a story to avoid overlapping the card.
+    if (st.screen !== this._lastScreen) {
+      this._lastScreen = st.screen;
+      if (this.props.onScreenChange) this.props.onScreenChange(st.screen);
+    }
     const key = st.screen + "|" + st.curId + "|" + st.sub + "|" + st.panel + "|" + st.ayahIdx + "|" + st.quizIdx;
     if (key === this._spokeKey) return;
     this._spokeKey = key;
@@ -173,7 +187,12 @@ export default class ProphetsJourney extends React.Component {
   // ---------- DATA ----------
   data() { return PROPHET_DATA || []; }
   curData() { return this.data().find((d) => d.id === this.state.curId); }
-  isUnlocked(i) { const DATA = this.data(); return i === 0 || this.state.progress.completed.includes(DATA[i - 1].id); }
+  isUnlocked(i) {
+    // Guests may only preview the first story; everything else prompts login.
+    if (this.isGuest) return i === 0;
+    const DATA = this.data();
+    return i === 0 || this.state.progress.completed.includes(DATA[i - 1].id);
+  }
 
   // ---------- PROGRESS ----------
   pkey(p) { return "ipj_" + p; }
@@ -185,6 +204,7 @@ export default class ProphetsJourney extends React.Component {
     return r;
   }
   saveProgress() {
+    if (this.isGuest) return; // guest runs are never persisted
     try { localStorage.setItem(this.pkey(this.state.profile), JSON.stringify(this.state.progress)); } catch (e) {}
     // Mirror to the server for logged-in children so progress follows the account.
     if (this.props.childProfile) {
@@ -238,7 +258,23 @@ export default class ProphetsJourney extends React.Component {
   startApp() { this.primeSpeech(); this.sfx("open"); this.setState({ screen: "profile" }); }
   // Tapping a prophet first asks which language to travel in; the choice then
   // opens the stage in that language.
-  promptLang(id) { const i = this.data().findIndex((d) => d.id === id); if (!this.isUnlocked(i)) return; this.sfx("open"); this.setState({ langPrompt: id }); }
+  promptLang(id) {
+    const i = this.data().findIndex((d) => d.id === id);
+    if (!this.isUnlocked(i)) { if (this.isGuest) this.requestLogin(); return; }
+    this.sfx("open"); this.setState({ langPrompt: id });
+  }
+  requestLogin() { if (this.props.onRequestLogin) this.props.onRequestLogin(); }
+
+  // ---------- LEADERBOARD ----------
+  openLeaderboard() {
+    this.sfx("open");
+    this.setState({ lbOpen: true, lbBusy: true, lbData: null, lbSelected: null });
+    fetch(asset("/api/leaderboard"), { credentials: "same-origin" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => this.setState({ lbData: d || { entries: [], me: null }, lbBusy: false }))
+      .catch(() => this.setState({ lbBusy: false, lbData: { entries: [], me: null } }));
+  }
+  closeLeaderboard() { this.setState({ lbOpen: false, lbSelected: null }); }
   chooseLang(lang, voice) {
     const id = this.state.langPrompt;
     const next = { lang, langPrompt: null };
@@ -652,7 +688,10 @@ export default class ProphetsJourney extends React.Component {
         quizOpts: q.opts.map((o, i) => ({ letter: String.fromCharCode(65 + i), t: o.t, ok: o.ok, picked: picked === i, revealed: picked != null, onPick: () => this.pickQuiz(i) })) }; }
     else if (st === "reward") { const lesson = (C.lesson || d.lesson), badge = (C.badge || d.badge);
       const body = rewardText({ gender: gen, lang: this.state.lang, prophetName: d.name, honor: d.honor, lesson });
-      v = { key: "reward", tag: L ? "Manzil roshan!" : "Land Lit!", icon: "🎉", tagColor: "#f5c451", body, isReward: true, noorEarned: this.state.earned, stars: this.state.starsEarned, leveledTo: this.state.leveledTo, badge, badgeIcon: d.badgeIcon, primary: { label: L ? "Safar jari rakhein ›" : "Continue your journey ›", on: () => this.backToMap() } }; }
+      const rewardPrimary = this.isGuest
+        ? { label: L ? "Login karke jari rakhein ›" : "Log in to continue ›", on: () => this.requestLogin() }
+        : { label: L ? "Safar jari rakhein ›" : "Continue your journey ›", on: () => this.backToMap() };
+      v = { key: "reward", tag: L ? "Manzil roshan!" : "Land Lit!", icon: "🎉", tagColor: "#f5c451", body, isReward: true, noorEarned: this.state.earned, stars: this.state.starsEarned, leveledTo: this.state.leveledTo, badge, badgeIcon: d.badgeIcon, primary: rewardPrimary }; }
     else v = {};
     if (v.body) v.words = this.words(v.body);
     return v;
@@ -719,6 +758,10 @@ export default class ProphetsJourney extends React.Component {
       muteIcon: st.muted ? "🔇" : "🔊", toggleMute: () => this.toggleMute(), replay: () => this.replay(),
       volume: st.volume, setVolume: (v) => this.setVolume(v),
       langPrompt: st.langPrompt, chooseLang: (l, v) => this.chooseLang(l, v), cancelLang: () => this.setState({ langPrompt: null }),
+      guest: this.isGuest, requestLogin: () => this.requestLogin(),
+      openLeaderboard: () => this.openLeaderboard(), closeLeaderboard: () => this.closeLeaderboard(),
+      selectLbEntry: (e) => this.setState({ lbSelected: e }),
+      lbOpen: st.lbOpen, lbBusy: st.lbBusy, lbData: st.lbData, lbSelected: st.lbSelected,
       saveAchievement: () => this.saveAchievement(),
       langLabel: (st.lang === "ur" ? "EN" : "اردو"), toggleLang: () => this.toggleLang(),
       t: {
@@ -866,30 +909,41 @@ export default class ProphetsJourney extends React.Component {
         {V.isMap && (
           <div style={s("position:absolute;inset:0;display:flex;flex-direction:column;")}>
             <div style={s("position:absolute;bottom:18px;right:16px;z-index:6;pointer-events:none;animation:ipjFloat 5s ease-in-out infinite;")}>{V.mapMedallion}</div>
-            <div style={s("flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:14px 16px;background:linear-gradient(180deg,rgba(12,8,32,.95),rgba(12,8,32,0));z-index:5;")}>
+            <div style={s("flex:0 0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:14px 16px;background:linear-gradient(180deg,rgba(12,8,32,.95),rgba(12,8,32,0));z-index:5;")}>
               <button onClick={V.goProfile} style={s("cursor:pointer;display:flex;align-items:center;gap:10px;border:1px solid rgba(245,196,81,.25);background:rgba(255,255,255,.05);border-radius:40px;padding:6px 14px 6px 6px;color:#f4eede;")}>
                 <span style={s(`width:40px;height:40px;border-radius:50%;overflow:hidden;border:2px solid rgba(245,196,81,.6);background:${V.profileGrad};display:block;`)}>
                   <img src={asset(V.profilePic)} alt={V.profileName} style={s("width:100%;height:100%;object-fit:cover;display:block;")} />
                 </span>
                 <span style={s("font-family:'Fredoka';font-weight:600;font-size:16px;")}>{V.profileName}</span>
               </button>
-              <div style={s("flex:1;")}></div>
-              {V.streak > 0 && (
-                <div title={`${V.streak} ${V.t.streakLabel}`} style={s("display:flex;align-items:center;gap:5px;background:rgba(255,140,60,.14);border:1px solid rgba(255,140,60,.35);border-radius:40px;padding:7px 12px;")}>
-                  <span style={s("font-size:16px;")}>🔥</span>
-                  <span style={s("font-family:'Fredoka';font-weight:600;font-size:16px;color:#ffb86b;")}>{V.streak}</span>
+              <div style={s("margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;")}>
+                {V.streak > 0 && (
+                  <div title={`${V.streak} ${V.t.streakLabel}`} style={s("display:flex;align-items:center;gap:5px;background:rgba(255,140,60,.14);border:1px solid rgba(255,140,60,.35);border-radius:40px;padding:7px 12px;")}>
+                    <span style={s("font-size:16px;")}>🔥</span>
+                    <span style={s("font-family:'Fredoka';font-weight:600;font-size:16px;color:#ffb86b;")}>{V.streak}</span>
+                  </div>
+                )}
+                <div style={s("display:flex;align-items:center;gap:6px;background:rgba(245,196,81,.12);border:1px solid rgba(245,196,81,.3);border-radius:40px;padding:7px 14px;")}>
+                  <span style={s("color:#f5c451;font-size:18px;")}>✦</span>
+                  <span style={s("font-family:'Fredoka';font-weight:600;font-size:17px;color:#f5c451;")}>{V.noor}</span>
+                  <span style={s("opacity:.6;font-size:12px;")}>Noor</span>
                 </div>
-              )}
-              <div style={s("display:flex;align-items:center;gap:6px;background:rgba(245,196,81,.12);border:1px solid rgba(245,196,81,.3);border-radius:40px;padding:7px 14px;")}>
-                <span style={s("color:#f5c451;font-size:18px;")}>✦</span>
-                <span style={s("font-family:'Fredoka';font-weight:600;font-size:17px;color:#f5c451;")}>{V.noor}</span>
-                <span style={s("opacity:.6;font-size:12px;")}>Noor</span>
-              </div>
-              <div style={s("display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:40px;padding:7px 14px;")}>
-                <span style={s("font-size:16px;")}>🏅</span>
-                <span style={s("font-family:'Fredoka';font-weight:600;font-size:17px;")}>{V.badgeCount}</span>
+                <div style={s("display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:40px;padding:7px 14px;")}>
+                  <span style={s("font-size:16px;")}>🏅</span>
+                  <span style={s("font-family:'Fredoka';font-weight:600;font-size:17px;")}>{V.badgeCount}</span>
+                </div>
+                {V.guest ? (
+                  <button onClick={V.requestLogin} title="Log in" style={s("cursor:pointer;display:flex;align-items:center;gap:6px;background:rgba(245,196,81,.16);border:1px solid rgba(245,196,81,.4);border-radius:40px;padding:7px 14px;color:#f5c451;font-family:'Fredoka';font-weight:600;font-size:14px;")}>Log in</button>
+                ) : (
+                  <button onClick={V.openLeaderboard} title="Leaderboard" style={s("cursor:pointer;display:flex;align-items:center;gap:6px;background:rgba(127,224,192,.12);border:1px solid rgba(127,224,192,.32);border-radius:40px;padding:7px 12px;color:#bff5e2;font-family:'Fredoka';font-weight:600;font-size:15px;")}><span style={s("font-size:16px;")}>🏆</span></button>
+                )}
               </div>
             </div>
+            {V.guest && (
+              <div style={s("margin:0 16px 6px;display:flex;align-items:center;gap:8px;justify-content:center;background:rgba(245,196,81,.08);border:1px solid rgba(245,196,81,.25);border-radius:14px;padding:8px 12px;font-size:13px;color:#ffe6a3;")}>
+                <span>👀</span><span>Guest preview — only Prophet 1 is open. Log in to unlock all 25 &amp; earn Noor.</span>
+              </div>
+            )}
             <div style={s("display:flex;align-items:center;justify-content:center;gap:8px;padding:0 16px 6px;")}>
               <span style={s("font-size:18px;")}>{V.level.icon}</span>
               <span style={s("font-family:'Fredoka';font-weight:600;font-size:14px;color:#ffe6a3;")}>{V.t.levelWord} {V.level.idx + 1} · {V.level.name}</span>
@@ -1097,6 +1151,70 @@ export default class ProphetsJourney extends React.Component {
                 </button>
               </div>
               <button onClick={V.cancelLang} style={s("margin-top:14px;background:none;border:none;color:rgba(244,238,222,.6);font-family:'Nunito';font-size:14px;cursor:pointer;")}>Cancel</button>
+            </div>
+          </div>
+        )}
+
+        {/* ============ LEADERBOARD ============ */}
+        {V.lbOpen && (
+          <div onClick={V.closeLeaderboard} style={s("position:fixed;inset:0;z-index:55;background:rgba(5,3,15,.78);display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(3px);")}>
+            <div onClick={(e) => e.stopPropagation()} style={s("position:relative;width:100%;max-width:420px;max-height:86vh;display:flex;flex-direction:column;background:rgba(20,14,46,.97);border:1px solid rgba(127,224,192,.28);border-radius:22px;padding:18px 16px;box-shadow:0 18px 60px rgba(0,0,0,.55);")}>
+              <div style={s("display:flex;align-items:center;gap:10px;margin-bottom:4px;")}>
+                <span style={s("font-size:22px;")}>🏆</span>
+                <div style={s("font-family:'Fredoka';font-weight:600;font-size:20px;color:#f4eede;flex:1;")}>Leaderboard</div>
+                <button onClick={V.closeLeaderboard} style={s("cursor:pointer;border:none;background:rgba(255,255,255,.08);color:#f4eede;border-radius:50%;width:30px;height:30px;font-size:15px;")}>✕</button>
+              </div>
+              <div style={s("font-size:12.5px;opacity:.6;margin-bottom:12px;")}>Ranked by total Noor · younger travellers rank first on a tie</div>
+
+              {V.lbBusy && (<div style={s("padding:40px;text-align:center;")}><span className="ipj-spin" style={s("display:inline-block;width:34px;height:34px;border-radius:50%;border:4px solid rgba(127,224,192,.25);border-top-color:#7fe0c0;")}></span></div>)}
+
+              {!V.lbBusy && V.lbData && V.lbData.entries.length === 0 && (
+                <div style={s("padding:34px 10px;text-align:center;opacity:.7;font-size:14px;")}>No travellers ranked yet — be the first to light up a land! ✨</div>
+              )}
+
+              {!V.lbBusy && V.lbData && V.lbData.entries.length > 0 && (
+                <div className="ipj-scroll" style={s("overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding-right:2px;")}>
+                  {V.lbData.entries.map((e, i) => (
+                    <button key={i} onClick={() => V.selectLbEntry(e)} className="ipj-choice" style={s(`cursor:pointer;display:flex;align-items:center;gap:12px;text-align:left;border:1px solid ${e.isMe ? "rgba(245,196,81,.55)" : "rgba(255,255,255,.12)"};background:${e.isMe ? "rgba(245,196,81,.12)" : "rgba(255,255,255,.04)"};border-radius:14px;padding:10px 12px;color:#f4eede;`)}>
+                      <span style={s(`flex:0 0 auto;width:30px;text-align:center;font-family:'Fredoka';font-weight:700;font-size:16px;color:${e.rank <= 3 ? "#f5c451" : "rgba(244,238,222,.7)"};`)}>{e.rank <= 3 ? ["🥇", "🥈", "🥉"][e.rank - 1] : ("#" + e.rank)}</span>
+                      <span style={s(`flex:0 0 auto;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;border:2px solid ${e.gender === "girl" ? "rgba(245,111,161,.7)" : "rgba(245,196,81,.7)"};background:${e.gender === "girl" ? "rgba(245,111,161,.12)" : "rgba(245,196,81,.12)"};`)}>{e.icon}</span>
+                      <span style={s("flex:1;min-width:0;")}>
+                        <span style={s("display:block;font-family:'Fredoka';font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;")}>{e.handle}{e.isMe ? " (You)" : ""}</span>
+                        <span style={s("display:block;font-size:12px;opacity:.6;")}>{e.completed}/25 lands</span>
+                      </span>
+                      <span style={s("flex:0 0 auto;display:flex;align-items:center;gap:4px;color:#f5c451;font-family:'Fredoka';font-weight:700;font-size:15px;")}>✦ {e.score}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {!V.lbBusy && V.lbData && V.lbData.me && !V.lbData.entries.some((e) => e.isMe) && (
+                <div style={s("margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.1);")}>
+                  <div style={s("display:flex;align-items:center;gap:12px;border:1px solid rgba(245,196,81,.5);background:rgba(245,196,81,.12);border-radius:14px;padding:10px 12px;")}>
+                    <span style={s("width:30px;text-align:center;font-family:'Fredoka';font-weight:700;font-size:16px;color:#f5c451;")}>#{V.lbData.me.rank}</span>
+                    <span style={s("font-size:22px;")}>{V.lbData.me.icon}</span>
+                    <span style={s("flex:1;font-family:'Fredoka';font-weight:600;font-size:15px;")}>{V.lbData.me.handle} (You)</span>
+                    <span style={s("color:#f5c451;font-family:'Fredoka';font-weight:700;")}>✦ {V.lbData.me.score}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Tap-through profile card — pseudonymous only */}
+              {V.lbSelected && (
+                <div onClick={() => V.selectLbEntry(null)} style={s("position:absolute;inset:0;z-index:2;background:rgba(8,5,20,.88);border-radius:22px;display:flex;align-items:center;justify-content:center;padding:20px;")}>
+                  <div onClick={(e) => e.stopPropagation()} style={s("width:100%;max-width:300px;text-align:center;background:rgba(24,17,52,.99);border:1px solid rgba(245,196,81,.3);border-radius:18px;padding:22px 18px;")}>
+                    <div style={s(`width:84px;height:84px;margin:0 auto 10px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:44px;border:3px solid ${V.lbSelected.gender === "girl" ? "rgba(245,111,161,.8)" : "rgba(245,196,81,.8)"};background:${V.lbSelected.gender === "girl" ? "rgba(245,111,161,.14)" : "rgba(245,196,81,.14)"};`)}>{V.lbSelected.icon}</div>
+                    <div style={s("font-family:'Fredoka';font-weight:700;font-size:20px;color:#f4eede;")}>{V.lbSelected.handle}</div>
+                    <div style={s("font-size:13px;opacity:.6;margin-top:2px;")}>Rank #{V.lbSelected.rank}</div>
+                    <div style={s("display:flex;justify-content:center;gap:22px;margin:16px 0;")}>
+                      <div><div style={s("font-family:'Fredoka';font-weight:700;font-size:22px;color:#f5c451;")}>✦ {V.lbSelected.score}</div><div style={s("font-size:11px;opacity:.6;")}>Noor</div></div>
+                      <div><div style={s("font-family:'Fredoka';font-weight:700;font-size:22px;color:#bff5e2;")}>{V.lbSelected.completed}/25</div><div style={s("font-size:11px;opacity:.6;")}>Lands</div></div>
+                    </div>
+                    <div style={s("display:flex;align-items:center;justify-content:center;gap:7px;font-size:12px;opacity:.7;background:rgba(255,255,255,.05);border-radius:10px;padding:9px;")}>🔒 Photo &amp; name kept private</div>
+                    <button onClick={() => V.selectLbEntry(null)} style={s("cursor:pointer;margin-top:14px;width:100%;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#f4eede;border-radius:12px;padding:10px;font-family:'Fredoka';font-weight:600;")}>Back</button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

@@ -93,8 +93,14 @@ async function main() {
 
   // Splash → intro/about
   if (await clickText("begin")) { await sleep(1200); await shot("02-about.png"); }
-  // Intro → login
+  // Intro → login (now also shows the "see a story first" guest entry)
   if (await clickText("login")) { await sleep(1200); await shot("03-login.png"); }
+
+  // Guest preview — real flow: tap "see a story first" → guest journey map.
+  if (await clickText("see a story")) {
+    await sleep(1800);
+    await shot("27-guest-preview.png", "final/11-guest.png");
+  }
 
   // ---- Map + stage (dev preview route) ---------------------------------
   process.stdout.write("Map + stage…\n");
@@ -110,6 +116,27 @@ async function main() {
   });
   await sleep(700);
   await shot("05-map-scrolled.png");
+
+  // Scroll back up so the top HUD (with the leaderboard button) is visible.
+  await page.evaluate(() => {
+    const t = document.querySelector('[class*="ipj-scroll"]');
+    (t || window).scrollTo ? (t || window).scrollTo(0, 0) : window.scrollTo(0, 0);
+  });
+  await sleep(500);
+
+  // Leaderboard modal (🏆 button in the HUD).
+  await page.evaluate(() => {
+    const b = [...document.querySelectorAll("button")].find((x) => x.title === "Leaderboard");
+    if (b) b.click();
+  });
+  await sleep(1300);
+  await shot("28-leaderboard.png", "final/10-leaderboard.png");
+  // Close it.
+  await page.evaluate(() => {
+    const b = [...document.querySelectorAll("button")].find((x) => (x.textContent || "").trim() === "✕");
+    if (b) b.click();
+  });
+  await sleep(500);
 
   // Open prophet #1 → language modal
   await page.evaluate(() => {

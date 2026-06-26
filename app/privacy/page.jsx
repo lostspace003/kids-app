@@ -67,7 +67,7 @@ export default function PrivacyPolicy() {
           Privacy Policy
         </h1>
         <p style={{ color: C.dim, fontSize: 14, margin: 0 }}>
-          Last updated: 25 June 2026
+          Last updated: 26 June 2026
         </p>
 
         <div
@@ -170,6 +170,29 @@ export default function PrivacyPolicy() {
             and used to create the child&rsquo;s avatar. You can edit the profile or
             ask us to delete the photo and account at any time (see
             &ldquo;Your choices&rdquo; below).
+          </P>
+
+          <H>Leaderboard (pseudonymous)</H>
+          <P>
+            The app includes an optional leaderboard that ranks children by their
+            total &ldquo;Noor&rdquo; (in-app achievement points). To protect
+            children, the leaderboard is <b>pseudonymous</b>: each child is shown
+            only as a <b>fun mascot icon and an auto-generated handle</b> (for
+            example, &ldquo;Brave Lantern&rdquo;). We do <b>not</b> display a
+            child&rsquo;s real name, photo, age, date of birth, or country to other
+            users. A child&rsquo;s date of birth is used only privately, on our
+            server, as a tie-breaker when two scores are equal (younger first) — it
+            is never shown. Tapping another entry shows only that same public
+            information (icon, handle, score, lands completed).
+          </P>
+
+          <H>Trying the app without an account</H>
+          <P>
+            A visitor may preview a single story without logging in. In this guest
+            mode <b>no account is created and no personal information is collected
+            or saved</b>; progress is kept only in the browser for that session and
+            is discarded. Logging in is required to continue beyond the first story,
+            save progress, or appear on the leaderboard.
           </P>
 
           <H>How information is shared</H>

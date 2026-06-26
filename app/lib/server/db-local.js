@@ -112,6 +112,11 @@ export const dbLocal = {
       return data;
     }),
 
+  // ---- leaderboard feed (all profiles + all progress) ----
+  getAllProfiles: () => readonly((d) => Object.values(d.profiles)),
+  getAllProgress: () =>
+    readonly((d) => Object.entries(d.progress).map(([userId, data]) => ({ userId, data }))),
+
   // ---- feedback / analytics ----
   addFeedback: (rec) =>
     tx((d) => {
