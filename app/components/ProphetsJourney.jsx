@@ -1204,14 +1204,14 @@ export default class ProphetsJourney extends React.Component {
               <div style={s("font-family:'Fredoka';font-weight:600;font-size:20px;color:#f4eede;margin-bottom:4px;")}>Choose your language</div>
               <div style={s("font-family:'Amiri',serif;font-size:18px;color:#f5c451;margin-bottom:18px;")}>اپنی زبان منتخب کریں</div>
               <div style={s("display:flex;flex-direction:column;gap:10px;")}>
-                <button onClick={() => V.chooseLang("en")} className="ipj-primary" style={s("cursor:pointer;border:none;border-radius:14px;padding:14px;font-family:'Fredoka';font-weight:600;font-size:17px;color:#1a1140;background:linear-gradient(180deg,#ffd56b,#f5b836);")}>English · Hamza 👦🏻</button>
+                <button onClick={() => V.chooseLang("en")} className="ipj-primary" style={s("cursor:pointer;border:none;border-radius:14px;padding:14px;font-family:'Fredoka';font-weight:600;font-size:17px;color:#1a1140;background:linear-gradient(180deg,#ffd56b,#f5b836);")}>English 👦🏻</button>
                 <button onClick={() => V.chooseLang("ur", "male")} className="ipj-choice" style={s("cursor:pointer;border:1px solid rgba(245,196,81,.4);background:rgba(245,196,81,.1);color:#f4eede;border-radius:14px;padding:13px 14px;display:flex;align-items:center;justify-content:center;gap:8px;")}>
                   <span style={s("font-family:'Amiri',serif;font-weight:700;font-size:19px;")}>اردو</span>
-                  <span style={s("font-family:'Fredoka';font-size:14px;opacity:.85;")}>Urdu · Huzaifa (male) 👳🏻‍♂️</span>
+                  <span style={s("font-family:'Fredoka';font-size:14px;opacity:.85;")}>Urdu · Male 👳🏻‍♂️</span>
                 </button>
                 <button onClick={() => V.chooseLang("ur", "female")} className="ipj-choice" style={s("cursor:pointer;border:1px solid rgba(245,196,81,.4);background:rgba(245,196,81,.1);color:#f4eede;border-radius:14px;padding:13px 14px;display:flex;align-items:center;justify-content:center;gap:8px;")}>
                   <span style={s("font-family:'Amiri',serif;font-weight:700;font-size:19px;")}>اردو</span>
-                  <span style={s("font-family:'Fredoka';font-size:14px;opacity:.85;")}>Urdu · Hana (female) 🧕🏻</span>
+                  <span style={s("font-family:'Fredoka';font-size:14px;opacity:.85;")}>Urdu · Female 🧕🏻</span>
                 </button>
               </div>
               <button onClick={V.cancelLang} style={s("margin-top:14px;background:none;border:none;color:rgba(244,238,222,.6);font-family:'Nunito';font-size:14px;cursor:pointer;")}>Cancel</button>
