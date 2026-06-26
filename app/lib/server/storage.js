@@ -27,6 +27,8 @@ export function contentTypeForKey(key) {
       jpeg: "image/jpeg",
       webp: "image/webp",
       gif: "image/gif",
+      mp3: "audio/mpeg",
+      json: "application/json",
     }[ext] || "application/octet-stream"
   );
 }

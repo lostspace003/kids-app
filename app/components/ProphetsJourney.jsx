@@ -22,7 +22,15 @@ const E = React.createElement;
 // Prefix static asset URLs with the deploy base path (e.g. "/kids-app" on
 // GitHub Pages) so audio + photos resolve correctly under a sub-path.
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
-const asset = (p) => (p && p.charAt(0) === "/" ? BASE + p : p);
+// The narration audio can be served from a separate base — set
+// NEXT_PUBLIC_AUDIO_BASE="/api/media/audio" to stream it from Azure Blob (via the
+// media proxy) instead of the bundled /public/audio. Unset = local static files.
+const AUDIO_BASE = process.env.NEXT_PUBLIC_AUDIO_BASE || "";
+const asset = (p) => {
+  if (!p || p.charAt(0) !== "/") return p;
+  if (AUDIO_BASE && p.startsWith("/audio/")) return AUDIO_BASE + p.slice(6); // strip "/audio"
+  return BASE + p;
+};
 
 // Noor → level ladder. Each level lifts the lantern a little higher.
 const LEVELS = [

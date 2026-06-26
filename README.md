@@ -17,7 +17,7 @@ Built from a Claude Design prototype (see `project/` and `chats/`). Implemented 
 
 ## Narration audio pipeline
 
-The narration is **static, pre-generated audio** (committed under `public/audio/`), not synthesized live in the browser.
+The narration is **static, pre-generated audio**, not synthesized live in the browser. It's stored in **Azure Blob** (the `media` container under `audio/`) and served via the `/api/media/audio/<key>` proxy — the build sets `NEXT_PUBLIC_AUDIO_BASE=/api/media/audio` so the app fetches it from Blob instead of the bundle. The files are kept locally under `public/audio/` for development (gitignored — a fresh clone runs `npm run sync:audio` in reverse, or just regenerates).
 
 - `scripts/generate-audio.mjs` enumerates every narratable beat (both languages × both travellers), builds the exact spoken string via `app/lib/narration.js` (shared with the runtime so a content hash matches), and synthesises it through the **Azure Speech REST endpoint** with SSML (`<break>` pauses, `<prosody>` rate, friendly style). For Urdu it also normalises stray Arabic presentation-form glyphs and applies a small harakat-disambiguated pronunciation lexicon, so names and words are voiced correctly. It writes `public/audio/<hash>.mp3` + `public/audio/manifest.json` (per-clip duration + word-boundary timings); identical text is hashed once, so shared lines aren't duplicated. Each clip is written to a temp file and promoted only when it holds valid audio, so a failed synth never corrupts an existing clip.
 - Regenerate (e.g. after editing story text or to change voices):
@@ -29,6 +29,11 @@ The narration is **static, pre-generated audio** (committed under `public/audio/
   ```
 
   Voices are overridable: `VOICE_EN=en-US-AvaMultilingualNeural VOICE_UR=ur-PK-UzmaNeural ...`.
+- Publish the regenerated clips to Blob (uses the Azure CLI — `az login` first):
+
+  ```bash
+  npm run sync:audio    # uploads public/audio -> media container, audio/ prefix
+  ```
 
 ## Run it
 
@@ -54,6 +59,7 @@ npm run build && npm run start   # production
   - `app/api/` — route handlers (auth, profile, progress, leaderboard, account deletion, media)
 - `scripts/generate-audio.mjs` — Azure Speech batch generator (see "Narration audio pipeline")
 - `scripts/capture-screenshots.mjs` — headless store-screenshot generator (`--device play|ios67|ios65`)
-- `public/audio/` — generated `.mp3` clips + `manifest.json` (committed)
+- `scripts/sync-audio-blob.mjs` — publish `public/audio/` to Azure Blob (`npm run sync:audio`)
+- `public/audio/` — generated `.mp3` clips + `manifest.json` (local-only / gitignored; live copies in Azure Blob)
 - Store-submission guides: `PLAY-STORE-LISTING.md`, `BUILD-ANDROID-APK.md`, `BUILD-IOS-APP.md`
 - `project/`, `chats/` — the original Claude Design handoff bundle (kept for reference)

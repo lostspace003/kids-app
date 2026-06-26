@@ -19,6 +19,10 @@ concurrency:
 env:
   AZURE_WEBAPP_NAME: gennoor-app-b5ae1c
   NODE_VERSION: "22"
+  # Narration audio is served from Azure Blob via the /api/media proxy (the mp3s
+  # live in the "media" container under audio/). Build-time inlined so the app
+  # requests /api/media/audio/* instead of the (no-longer-bundled) /public/audio.
+  NEXT_PUBLIC_AUDIO_BASE: "/api/media/audio"
 
 jobs:
   build-and-deploy:

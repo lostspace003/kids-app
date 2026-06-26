@@ -28,8 +28,9 @@ yarn-error.log*
 /h3_ghibli.png
 /h3_ghibli.webp
 
-# audio generation log (the mp3s + manifest.json ARE committed)
-/public/audio/_genlog.txt
+# narration audio now lives in Azure Blob (served via /api/media/audio); kept
+# locally for dev but no longer committed. See README "Narration audio pipeline".
+/public/audio
 
 # typescript / next
 next-env.d.ts

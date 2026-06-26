@@ -10,6 +10,7 @@
     "start": "next start",
     "lint": "next lint",
     "gen:audio": "node scripts/generate-audio.mjs",
+    "sync:audio": "node scripts/sync-audio-blob.mjs",
     "gen:screenshots": "node scripts/capture-screenshots.mjs",
     "gen:cert-shot": "node scripts/capture-certificate.mjs"
   },
