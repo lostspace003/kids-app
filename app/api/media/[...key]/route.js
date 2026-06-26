@@ -8,10 +8,12 @@ export const dynamic = "force-dynamic";
 export async function GET(_req, { params }) {
   const { key: segments } = await params;
   const key = (segments || []).map(decodeURIComponent).join("/");
-  // Narration audio under "audio/" is public + content-hashed (immutable), so it
-  // can be cached hard and shared. Everything else (user photos) stays private.
-  const isAudio = key.startsWith("audio/");
-  const cache = isAudio
+  // Narration mp3s under "audio/" are public + content-hashed → cache hard.
+  // The manifest changes whenever clips do, so it must stay fresh. Everything
+  // else (user photos) stays private.
+  const cache = key === "audio/manifest.json"
+    ? "public, max-age=60, must-revalidate"
+    : key.startsWith("audio/")
     ? "public, max-age=31536000, immutable"
     : "private, max-age=3600";
   try {

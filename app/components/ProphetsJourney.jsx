@@ -363,10 +363,10 @@ export default class ProphetsJourney extends React.Component {
     const oC1 = (L && PROPHET_UR[od1.id]) || od1;
     const lesson = C.lesson || d.lesson, wrongLesson = oC1.lesson || od1.lesson;
     const items = [
-      { q: L ? `${this.dispName(d)} ${d.honor} ke safar ne humein kya sikhaya?` : `What did journeying with ${this.dispName(d)} ${d.honor} teach us?`,
+      { q: L ? `${this.dispName(d)} ${this.dispHonor(d)} ke safar ne humein kya sikhaya?` : `What did journeying with ${this.dispName(d)} ${this.dispHonor(d)} teach us?`,
         opts: mix({ t: lesson, ok: true }, { t: wrongLesson, ok: false }) },
       { q: L ? "Yeh kis nabi ka safar tha?" : "Whose journey was this?",
-        opts: mix({ t: `${this.dispName(d)} ${d.honor}`, ok: true }, { t: `${this.dispName(od2)} ${od2.honor}`, ok: false }) },
+        opts: mix({ t: `${this.dispName(d)} ${this.dispHonor(d)}`, ok: true }, { t: `${this.dispName(od2)} ${this.dispHonor(od2)}`, ok: false }) },
     ];
     this.setState({ sub: "quiz", quiz: { items }, quizIdx: 0, quizPick: null, activeWord: -1 });
   }
@@ -459,6 +459,9 @@ export default class ProphetsJourney extends React.Component {
   myName() { return this.state.profile && PROFILES[this.state.profile] ? PROFILES[this.state.profile].name : "friend"; }
   // Displayed prophet name: Biblical/English in English mode, Arabic transliteration in Urdu.
   dispName(d) { return this.state.lang === "en" ? enName(d) : d.name; }
+  // Honorific glyph: English shows "(PBUH)" (the canonical d.honor); Urdu keeps "(AS)".
+  // Muhammad's ﷺ is unchanged in both.
+  dispHonor(d) { return this.state.lang === "en" ? d.honor : (d.honor === "(PBUH)" ? "(AS)" : d.honor); }
   // Narration is gendered (beta/beti), never name-personalised — so the audio
   // is fully static (two variants). Falls back to "boy" wording if unknown.
   myGender() {
@@ -786,7 +789,7 @@ export default class ProphetsJourney extends React.Component {
     const cur = this.curData(); let curVM = {}, scene = null, view = {}, sceneKey = "";
     if (cur) {
       const stepNames = { arrive: "Arrive", story: "Story", decision: "Choose", dres: "Choose", modern: "Today", mres: "Today", ayah: "Qur’an", quiz: "Recap", reward: "Reward" };
-      curVM = { name: this.dispName(cur), ar: cur.ar, honor: cur.honor, stepLabel: stepNames[st.sub] || "" };
+      curVM = { name: this.dispName(cur), ar: cur.ar, honor: this.dispHonor(cur), stepLabel: stepNames[st.sub] || "" };
       const sk = cur.id + "|" + st.sub + "|" + st.panel;
       if (this._sk !== sk) { this._scene = this.buildScene(cur); this._sk = sk; }
       scene = this._scene; sceneKey = sk; view = this.buildView();
@@ -896,7 +899,7 @@ export default class ProphetsJourney extends React.Component {
     ctx.textAlign = "center";
     ctx.fillStyle = "#f4eede"; ctx.font = "600 54px Fredoka, sans-serif"; ctx.fillText(prof ? prof.name : "", W / 2, 650);
     ctx.fillStyle = "#f5c451"; ctx.font = "700 42px Amiri, serif"; ctx.fillText(d.ar || "", W / 2, 720);
-    ctx.fillStyle = "#f4eede"; ctx.font = "600 40px Fredoka, sans-serif"; ctx.fillText(`${this.dispName(d)} ${d.honor}`, W / 2, 786);
+    ctx.fillStyle = "#f4eede"; ctx.font = "600 40px Fredoka, sans-serif"; ctx.fillText(`${this.dispName(d)} ${this.dispHonor(d)}`, W / 2, 786);
     ctx.font = "60px serif"; for (let i = 0; i < 3; i++) { ctx.fillStyle = i < stars ? "#f5c451" : "rgba(255,255,255,.2)"; ctx.fillText("★", W / 2 - 80 + i * 80, 880); }
     ctx.fillStyle = "#bff5e2"; ctx.font = "600 36px Fredoka, sans-serif"; ctx.fillText(`${d.badgeIcon} ${d.badge}   ·   +${noor} Noor`, W / 2, 958);
     ctx.fillStyle = "rgba(244,238,222,.6)"; ctx.font = "500 30px Fredoka, sans-serif"; ctx.fillText("Safar-e-Anbiya · safar-anbiya.gennoor.com", W / 2, 1030);

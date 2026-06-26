@@ -30,7 +30,7 @@ export const PRON = {
 // Spoken form of the honorific glyphs. These stay as glyphs on screen but are
 // now voiced with the full, respectful salutation.
 export const HONOR_SPOKEN = {
-  "(AS)": "alay-his sa-laam",
+  "(PBUH)": "peace be upon him",
   "ﷺ": "sal-lal-laahu alay-hi wa sal-lam",
 };
 
@@ -39,9 +39,9 @@ export function tokenize(t) {
 }
 
 // Map a single display token to the form a voice should pronounce. Honorific
-// glyphs ((AS) / ﷺ) stay on screen but are voiced with the full salutation.
+// glyphs ((PBUH) / ﷺ) stay on screen but are voiced with the full salutation.
 export function speakForm(tok) {
-  const m = tok.match(/^(\(AS\)|ﷺ)([.,;:!?'")]*)$/u);
+  const m = tok.match(/^(\(PBUH\)|ﷺ)([.,;:!?'")]*)$/u);
   if (m) return (HONOR_SPOKEN[m[1]] || "") + (m[2] || "");
   const lead = (tok.match(/^[^A-Za-z]*/) || [""])[0];
   const trail = (tok.match(/[^A-Za-z]*$/) || [""])[0];
@@ -127,7 +127,7 @@ export function rewardText({ gender, lang, prophetName, honor, lesson }) {
 // Urdu-script content (PROPHET_UR_SCRIPT) while the screen keeps Roman text.
 // ---------------------------------------------------------------------------
 export const NAME_UR = { Hamza: "حمزہ", Huzaifa: "حذیفہ" };
-export const HONOR_UR = { "(AS)": "علیہ السلام", "ﷺ": "صلی اللہ علیہ وسلم" };
+export const HONOR_UR = { "(PBUH)": "علیہ السلام", "ﷺ": "صلی اللہ علیہ وسلم" };
 
 // Prophet names in proper Urdu spelling, keyed by prophet id. Used for the
 // spoken Urdu name in arrive/reward so it matches EXACTLY how the name is

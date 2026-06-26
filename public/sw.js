@@ -4,7 +4,7 @@
 // responses, and serves page navigations network-first so deployed updates
 // show up immediately (important for the TWA, which always loads the live site).
 
-const CACHE = "safar-anbiya-v2";
+const CACHE = "safar-anbiya-v3";
 const PRECACHE = [
   "/",
   "/manifest.webmanifest",
@@ -38,10 +38,13 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return; // let cross-origin (fonts) pass through
-  // Narration audio under /api/media/audio is immutable + content-hashed, so let
-  // it fall through to the cache-first handler below for offline playback. Every
-  // other /api/ route (auth, profile, leaderboard, photos) must never be cached.
-  if (url.pathname.startsWith("/api/") && !url.pathname.startsWith("/api/media/audio/")) return;
+  // Narration mp3s under /api/media/audio are immutable + content-hashed, so let
+  // them fall through to the cache-first handler below for offline playback. The
+  // manifest changes on every regen (skip it → always network). Every other
+  // /api/ route (auth, profile, leaderboard, photos) must never be cached.
+  const isAudioClip =
+    url.pathname.startsWith("/api/media/audio/") && !url.pathname.endsWith("/manifest.json");
+  if (url.pathname.startsWith("/api/") && !isAudioClip) return;
 
   // Network-first for page navigations: always try the live site, fall back to
   // the cached shell only when offline.

@@ -29,7 +29,7 @@ a related Qur'an verse with clear recitation, and answers a friendly recap quiz 
 earning Noor (light) and badges along the way.
 
 WHAT'S INSIDE
-• All 25 prophets — a complete, age-appropriate journey from Adam (AS) onward.
+• All 25 prophets — a complete, age-appropriate journey from Adam (PBUH) onward.
 • Narrated stories — soft, child-friendly narration you can play, pause, or replay.
 • Qur'an verses — a few authentic ayat per prophet, with recitation and meaning.
 • Gentle choices — little "what would you do?" moments that nurture good akhlaq.
