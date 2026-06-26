@@ -72,7 +72,7 @@ const CARD_OFFSETS = [
   { x: 0, y: 0 }, { x: 0, y: -11 }, { x: -4, y: -5 }, { x: 4, y: -14 }, { x: -3, y: -8 }, { x: 3, y: -3 },
 ];
 const HL = "color:#ffe6a3;text-shadow:0 0 14px rgba(245,196,81,.85);";
-const NORMAL = "color:rgba(244,238,222,.84);transition:color .12s,text-shadow .12s;";
+const NORMAL = "color:rgba(244,238,222,.96);transition:color .12s,text-shadow .12s;";
 
 export default class ProphetsJourney extends React.Component {
   constructor(props) {
@@ -914,7 +914,7 @@ export default class ProphetsJourney extends React.Component {
                     <div style={s(n.labelStyle)}>
                       <div style={s("font-family:'Fredoka';font-weight:600;font-size:15px;line-height:1.05;" + n.dim)}>{n.name}</div>
                       <div style={s("font-family:'Amiri',serif;font-size:14px;color:#f5c451;" + n.dim)}>{n.ar}</div>
-                      <div style={s("font-size:10px;opacity:.6;" + n.dim)}>{n.epithet}</div>
+                      <div style={s("font-size:12px;opacity:.82;line-height:1.25;text-shadow:0 1px 4px rgba(0,0,0,.5);" + n.dim)}>{n.epithet}</div>
                       {n.done && (
                         <div style={s("display:flex;align-items:center;gap:8px;margin-top:2px;" + (n.side === "right" ? "justify-content:flex-end;" : ""))}>
                           <span style={s("font-size:12px;letter-spacing:1px;")}>
@@ -935,7 +935,7 @@ export default class ProphetsJourney extends React.Component {
                   {V.badges.map((b, i) => (
                     <div key={i} title={b.done ? b.label + " · " + b.name : "Locked"} style={s(`display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 4px;border-radius:14px;background:${b.done ? "rgba(245,196,81,.1)" : "rgba(255,255,255,.03)"};border:1px solid ${b.done ? "rgba(245,196,81,.3)" : "rgba(255,255,255,.06)"};${b.done ? "" : "opacity:.5;"}`)}>
                       <div style={s("font-size:26px;" + (b.done ? "animation:ipjBadgeWobble 3.5s ease-in-out infinite;" : ""))}>{b.icon}</div>
-                      <div style={s("font-size:9px;text-align:center;line-height:1.1;opacity:.8;height:22px;overflow:hidden;")}>{b.done ? b.label : ""}</div>
+                      <div style={s("font-size:10.5px;text-align:center;line-height:1.2;opacity:.92;height:26px;overflow:hidden;")}>{b.done ? b.label : ""}</div>
                     </div>
                   ))}
                 </div>
@@ -978,9 +978,9 @@ export default class ProphetsJourney extends React.Component {
 
             <div style={s("position:absolute;z-index:9;" + V.hudhudPos)}>{V.hudhud}</div>
 
-            <div style={s("position:absolute;left:0;right:0;bottom:0;z-index:12;display:flex;justify-content:center;padding:0 14px 18px;")}>
+            <div style={s("position:absolute;left:0;right:0;bottom:0;z-index:12;display:flex;justify-content:center;padding:0 14px clamp(20px,5vh,46px);")}>
              <div style={s(`width:100%;max-width:640px;transition:${this.props.reduceMotion ? "none" : "transform 1.2s cubic-bezier(.4,.1,.2,1)"};transform:translate(${V.cardOffset.x}vw,${V.cardOffset.y}vh);`)}>
-              <div className={this.props.reduceMotion ? "" : "ipj-card-float"}>
+              <div>
               <div key={V.view.key} className="ipj-scroll" style={s("width:100%;max-height:calc(100dvh - 132px);overflow-y:auto;background:linear-gradient(180deg,rgba(31,22,58,.86),rgba(18,12,40,.94));border:1px solid rgba(245,196,81,.28);border-radius:24px;padding:clamp(14px,3.5vw,20px) clamp(15px,4vw,22px);backdrop-filter:blur(10px);box-shadow:0 16px 50px rgba(0,0,0,.5);animation:ipjRise .4s ease both;")}>
 
                 <div style={s("display:flex;align-items:center;gap:9px;margin-bottom:8px;")}>
@@ -1002,7 +1002,7 @@ export default class ProphetsJourney extends React.Component {
                   </div>
                 )}
 
-                <div style={s(`font-size:clamp(16px,4vw,20px);line-height:1.62;font-weight:600;text-wrap:pretty;${V.view.rtl ? "direction:rtl;text-align:right;font-family:'Amiri',serif;line-height:2;" : ""}`)}>
+                <div style={s(`font-size:clamp(17px,4.2vw,21px);line-height:1.62;font-weight:600;text-wrap:pretty;text-shadow:0 1px 6px rgba(0,0,0,.55);${V.view.rtl ? "direction:rtl;text-align:right;font-family:'Amiri',serif;line-height:2;" : ""}`)}>
                   {(V.view.words || []).map((w, i) => <span key={i} style={s(w.style)}>{w.t}</span>)}
                 </div>
 

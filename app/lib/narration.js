@@ -9,15 +9,29 @@
 // ---------------------------------------------------------------------------
 
 // Phonetic spellings so a TTS engine pronounces Islamic terms and names well.
+// Names are spelled the Arabic way (long vowels doubled, stress hyphenated) so
+// the English voice says them with proper, respectful pronunciation rather than
+// an anglicised reading (e.g. "Aa-dam", not "ADD-uhm").
 export const PRON = {
   "allah": "Al-laah", "bismillah": "Bis-mil-laah", "alhamdulillah": "Al-ham-doo-lil-laah",
   "mashaallah": "Maa-shaa Al-laah", "subhanallah": "Sub-haan Al-laah", "inshaallah": "In-shaa Al-laah",
   "du'a": "doo-aah", "dua": "doo-aah", "akhlaq": "akh-laaq", "kaaba": "Kaa-bah",
   "barakah": "ba-ra-kah", "quran": "Qur-aan", "qur'an": "Qur-aan", "noor": "noor",
   "jameel": "ja-meel", "sabr": "saber", "tawheed": "taw-heed", "huzaifa": "Hu-zay-fah",
-  "ismail": "Is-maa-eel", "ishaq": "Is-haaq", "yaqub": "Ya-qoob", "ayyub": "Ay-yoob",
-  "yusuf": "Yoo-suf", "musa": "Moo-saa", "nuh": "Nooh", "yunus": "Yoo-nus", "zakariya": "Za-ka-ree-yah",
-  "sulayman": "Su-lay-maan", "dawud": "Daa-wood", "harun": "Haa-roon", "yahya": "Yah-yaa", "isa": "Ee-saa",
+  // The 25 prophets — every name mapped so none is read flat/anglicised.
+  "adam": "Aa-dam", "idris": "Id-rees", "nuh": "Nooh", "hud": "Hood", "salih": "Saa-leh",
+  "ibrahim": "Ib-raa-heem", "lut": "Loot", "ismail": "Is-maa-eel", "ishaq": "Is-haaq",
+  "yaqub": "Ya-qoob", "yusuf": "Yoo-suf", "ayyub": "Ay-yoob", "shu'ayb": "Shu-ayb",
+  "musa": "Moo-saa", "harun": "Haa-roon", "dhul-kifl": "Zul-Kifl", "dawud": "Daa-wood",
+  "sulayman": "Su-lay-maan", "ilyas": "Il-yaas", "al-yasa": "Al-Ya-saa", "yunus": "Yoo-nus",
+  "zakariya": "Za-ka-ree-yah", "yahya": "Yah-yaa", "isa": "Ee-saa", "muhammad": "Mu-ham-mad",
+};
+
+// Spoken form of the honorific glyphs. These stay as glyphs on screen but are
+// now voiced with the full, respectful salutation.
+export const HONOR_SPOKEN = {
+  "(AS)": "alay-his sa-laam",
+  "ﷺ": "sal-lal-laahu alay-hi wa sal-lam",
 };
 
 export function tokenize(t) {
@@ -25,10 +39,10 @@ export function tokenize(t) {
 }
 
 // Map a single display token to the form a voice should pronounce. Honorific
-// glyphs ((AS) / ﷺ) are silent (kept on screen, dropped from speech).
+// glyphs ((AS) / ﷺ) stay on screen but are voiced with the full salutation.
 export function speakForm(tok) {
   const m = tok.match(/^(\(AS\)|ﷺ)([.,;:!?'")]*)$/u);
-  if (m) return m[2] || "";
+  if (m) return (HONOR_SPOKEN[m[1]] || "") + (m[2] || "");
   const lead = (tok.match(/^[^A-Za-z]*/) || [""])[0];
   const trail = (tok.match(/[^A-Za-z]*$/) || [""])[0];
   let core = tok.slice(lead.length, tok.length - trail.length);
@@ -115,6 +129,21 @@ export function rewardText({ gender, lang, prophetName, honor, lesson }) {
 export const NAME_UR = { Hamza: "حمزہ", Huzaifa: "حذیفہ" };
 export const HONOR_UR = { "(AS)": "علیہ السلام", "ﷺ": "صلی اللہ علیہ وسلم" };
 
+// Prophet names in proper Urdu spelling, keyed by prophet id. Used for the
+// spoken Urdu name in arrive/reward so it matches EXACTLY how the name is
+// written inside the Urdu story panels (PROPHET_UR_SCRIPT). Previously the
+// arrive/reward slot injected the Arabic `d.ar` form (with full harakat, e.g.
+// "آدَم" / "مُوسَىٰ"), which the ur-PK voice pronounces differently from the
+// plain Urdu form used in the panels ("آدم" / "موسیٰ") — so the same name was
+// heard two ways in one journey. These forms keep every mention consistent.
+export const NAME_UR_FULL = {
+  1: "آدم", 2: "ادریس", 3: "نوح", 4: "ہود", 5: "صالح",
+  6: "ابراہیم", 7: "لوط", 8: "اسماعیل", 9: "اسحاق", 10: "یعقوب",
+  11: "یوسف", 12: "ایوب", 13: "شعیب", 14: "موسیٰ", 15: "ہارون",
+  16: "ذوالکفل", 17: "داؤد", 18: "سلیمان", 19: "الیاس", 20: "الیسع",
+  21: "یونس", 22: "زکریا", 23: "یحییٰ", 24: "عیسیٰ", 25: "محمد",
+};
+
 export function storytellerWrapScript({ sub, gender, panelsLen, panel, decGood, modGood }) {
   const t = termFor(gender, true);
   let prefix = "", suffix = "";
@@ -178,7 +207,7 @@ export function narrationForBeat({ d, u, us, lang, gender, sub, panel = 0, picke
     const dec = (us && us.decision) || (u && u.decision) || d.decision;
     const mod = (us && us.modern) || (u && u.modern) || d.modern;
     const honorUr = HONOR_UR[d.honor] || "";
-    const prophetNameUr = d.ar || d.name;
+    const prophetNameUr = NAME_UR_FULL[d.id] || d.ar || d.name;
     let body = "";
     if (sub === "arrive") body = arriveTextScript({ gender, prophetNameUr, honorUr, arrive: C.arrive });
     else if (sub === "story") body = C.panels[panel];

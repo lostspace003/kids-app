@@ -62,6 +62,14 @@ Questions or feedback? Email admin@gennoor.com.
   (Play allows 2–8 phone screenshots — suggested 8: journey-map, story, quran-ayah,
   decision, quiz, reward-badge, certificate, and one of launch/languages.)
 
+> **Regenerating screenshots.** The phone screenshots are produced automatically
+> at exactly 1080×1920 by `scripts/capture-screenshots.mjs` (drives the running
+> dev server with Chrome via puppeteer-core). Start the app (`npm run dev`), then
+> `node scripts/capture-screenshots.mjs --lang en`. It writes the numbered set
+> (`01-…`–`26-…`) and the curated `final/` set. Re-run after any UI change so the
+> store art stays current. `final/9-certificate.png` is the completion certificate
+> (a separate generated artifact, not an in-app screen).
+
 ## Privacy policy URL  (required)
 ```
 https://safar-anbiya.gennoor.com/privacy
