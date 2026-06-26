@@ -10,7 +10,8 @@
     "start": "next start",
     "lint": "next lint",
     "gen:audio": "node scripts/generate-audio.mjs",
-    "gen:screenshots": "node scripts/capture-screenshots.mjs"
+    "gen:screenshots": "node scripts/capture-screenshots.mjs",
+    "gen:cert-shot": "node scripts/capture-certificate.mjs"
   },
   "dependencies": {
     "@azure/communication-email": "^1.0.0",
