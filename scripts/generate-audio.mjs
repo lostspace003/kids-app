@@ -20,7 +20,6 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { execSync } from "node:child_process";
-import sdk from "microsoft-cognitiveservices-speech-sdk";
 
 process.on("unhandledRejection", (e) => { console.error("UNHANDLED REJECTION:", e); process.exit(1); });
 
@@ -49,6 +48,31 @@ const LOCALE = { en: "en-US", ur: "ur-PK", ar: "ar-SA" };
 const RATE = { en: process.env.TTS_RATE || "-6%", ur: "-4%", ar: "-6%" };
 const PITCH = { en: "0%", ur: "0%", ar: "0%" };
 
+// Normalize stray Arabic *presentation-form* glyphs (and the one mis-read Arabic
+// heh) that the Urdu voice skips or mispronounces, to their proper base letters.
+// The biggest culprit is the lam-alef ligature ﻻ (U+FEFB), which the voice drops
+// entirely — that's the "wala→wa" / half-skipped-word fault. Applied at synthesis
+// only, so it does NOT change the content hash: a --force re-render fixes the
+// audio without regenerating clip filenames or pruning. The honorific ﷺ (U+FDFA)
+// and the Qur'anic ornate brackets ﴾﴿ are deliberately left untouched (a blanket
+// NFKC would corrupt them — e.g. ﷺ expands to a full phrase).
+const URDU_NORMALIZE = {
+  "ﻻ": "لا", // ﻻ → لا  (fixes "wala→wa" / half-skipped words)
+  "ﻇ": "ظ",       // ﻇ → ظ
+  "ﺛ": "ث",       // ﺛ → ث
+  "ﺚ": "ث",       // ﺚ → ث
+  "ﺂ": "آ",       // ﺂ → آ
+};
+function normalizeUrdu(text) {
+  let t = text;
+  for (const [bad, good] of Object.entries(URDU_NORMALIZE)) t = t.split(bad).join(good);
+  // Arabic heh ه (U+0647) → Urdu heh ہ (U+06C1) ONLY for the standalone pronoun
+  // "وه" (→ "وہ"), which the voice mis-reads as "ve". Whole-token only (lookaround
+  // on Arabic-letter ranges) so within-word heh is left for a later ear-check.
+  t = t.replace(/(?<![؀-ۿ])وه(?![؀-ۿ])/g, "وہ");
+  return t;
+}
+
 // Pronunciation lexicon for the Urdu voice — applied only at synthesis (does
 // not affect the content hash or word highlighting). Confirmed by ear.
 const URDU_LEX = {
@@ -62,10 +86,39 @@ function applyUrduLex(text) {
   return t;
 }
 
+// Word-level pronunciation fixes for SHORT Urdu words the voice gets wrong by
+// vowel: it reads the bare (harakat-less) spelling with the wrong vowels. Keyed
+// on the exact word with a harakat-disambiguated spoken alias. CRITICAL: unlike
+// URDU_LEX above these MUST match WHOLE TOKENS — a naive substring replace would
+// corrupt unrelated words (امی hits امید "hope" / امین; سوا hits سوال "question" /
+// سوار "rider"). The lookarounds bound the match to non-Arabic-letter edges.
+// NEEDS an ear-check on the regenerated audio. Synthesis-only (hash-stable).
+const URDU_LEX_WORD = {
+  "لوٹ": "لَوٹ",      // laut (return) — not "loot"
+  "امی": "اَمّی",     // ammi (mother) — not "ummi"
+  "سوا": "سِوا",      // siwa (except) — not "saraa"/"sawaa"
+  "سوائے": "سِوائے",  // siwaaye (except)
+};
+const URDU_WORD_RE = Object.entries(URDU_LEX_WORD).map(([w, alias]) => [
+  new RegExp("(?<![؀-ۿ])" + w + "(?![؀-ۿ])", "g"),
+  `<sub alias="${alias}">${w}</sub>`,
+]);
+function applyUrduLexWord(text) {
+  let t = text;
+  for (const [re, repl] of URDU_WORD_RE) t = t.replace(re, repl);
+  return t;
+}
+
 const args = process.argv.slice(2);
 const FORCE = args.includes("--force");
 const LIMIT = (() => { const i = args.indexOf("--limit"); return i >= 0 ? parseInt(args[i + 1], 10) : Infinity; })();
 const ONLY_LANG = (() => { const i = args.indexOf("--lang"); return i >= 0 ? args[i + 1] : null; })();
+// On some Node/OS combos the Azure SDK writes the mp3 but its completion
+// callback never fires, stalling the run. We race synthesis against a timeout
+// and, on stall, resolve from the finished file (see synthesize). --sdk-timeout
+// overrides the wait (ms); otherwise it adapts: generous until a stall is seen,
+// then short so the rest of the batch flies through.
+const SDK_TIMEOUT = (() => { const i = args.indexOf("--sdk-timeout"); return i >= 0 ? parseInt(args[i + 1], 10) : null; })();
 
 // --- credentials ----------------------------------------------------------
 let KEY = process.env.SPEECH_KEY;
@@ -89,20 +142,23 @@ if (!REGION) REGION = "centralindia";
 // --- helpers --------------------------------------------------------------
 const xmlEscape = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 
-// Add gentle pauses after sentence-ending punctuation and clause commas.
+// Add gentle pauses at punctuation so the narration breathes. The em-dash "—"
+// gets its own, clearly audible pause (the storyteller should settle before
+// proceeding), distinct from the shorter clause/comma pauses.
 function withBreaks(text) {
   // Handles Latin (.!?,—:;) and Urdu (۔ ؟ ؛ ،) punctuation alike.
   return xmlEscape(text)
-    .replace(/([.!?۔؟])(\s+)/g, '$1<break time="420ms"/>$2')
-    .replace(/([—:;؛])(\s+)/g, '$1<break time="260ms"/>$2')
-    .replace(/([,،])(\s+)/g, '$1<break time="140ms"/>$2');
+    .replace(/([.!?۔؟])(\s+)/g, '$1<break time="450ms"/>$2')   // sentence end
+    .replace(/(—)(\s*)/g, '$1<break time="380ms"/>$2')          // em-dash: clear pause before proceeding
+    .replace(/([:;؛])(\s+)/g, '$1<break time="260ms"/>$2')      // clause break
+    .replace(/([,،])(\s+)/g, '$1<break time="160ms"/>$2');      // comma
 }
 
 function buildSsml(spoken, lang, voiceName) {
   // Urdu matches the approved samples: escape only (no injected <break> tags) so
   // the voice paces itself at punctuation, then apply the pronunciation lexicon.
   // English/Arabic keep the gentle injected pauses.
-  let content = lang === "ur" ? applyUrduLex(xmlEscape(spoken)) : withBreaks(spoken);
+  let content = lang === "ur" ? applyUrduLexWord(applyUrduLex(xmlEscape(normalizeUrdu(spoken)))) : withBreaks(spoken);
   const inner = `<prosody rate="${RATE[lang]}" pitch="${PITCH[lang]}">${content}</prosody>`;
   const body = STYLE[lang]
     ? `<mstts:express-as style="${STYLE[lang]}">${inner}</mstts:express-as>`
@@ -110,62 +166,60 @@ function buildSsml(spoken, lang, voiceName) {
   return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="${LOCALE[lang]}"><voice name="${voiceName || VOICE[lang]}">${body}</voice></speak>`;
 }
 
-const normWord = (s) => s.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
 
-// Map Azure word-boundary times onto display tokens. Azure may GROUP several
-// words into one boundary (esp. Urdu: "dhyan se") or keep them 1:1 (English),
-// so we walk both sides by accumulated text and interpolate within each group.
-function alignWords(realMap, realB) {
-  const w = [];
-  let j = 0;
-  for (let i = 0; i < realB.length && j < realMap.length; i++) {
-    const target = normWord(realB[i].text);
-    const t0 = realB[i].ms;
-    const t1 = i + 1 < realB.length ? realB[i + 1].ms : t0 + 400;
-    let acc = "";
-    const spanned = [];
-    while (j < realMap.length && acc.length < target.length) { acc += normWord(realMap[j].text); spanned.push(realMap[j].di); j++; }
-    if (!spanned.length && j < realMap.length) { spanned.push(realMap[j].di); j++; }
-    const m = spanned.length || 1;
-    spanned.forEach((di, k) => w.push([di, Math.round(t0 + (k / m) * (t1 - t0))]));
-  }
-  // Any tail tokens with no boundary keep the last known time.
-  const lastMs = w.length ? w[w.length - 1][1] : 0;
-  while (j < realMap.length) { w.push([realMap[j].di, lastMs]); j++; }
-  return w;
+const MIN_MP3_BYTES = 800; // anything smaller isn't real audio
+const TTS_ENDPOINT = `https://${REGION}.tts.speech.microsoft.com/cognitiveservices/v1`;
+
+// Even-spread word timings, used when we have no prior boundaries (the REST
+// endpoint doesn't return them): distribute display tokens across the duration.
+function evenTimings(realMap, durMs) {
+  const n = realMap.length || 1;
+  return realMap.map((m, i) => [m.di, Math.round((i / n) * durMs)]);
 }
 
-function synthesize(spoken, lang, map, outPath, voiceName) {
-  return new Promise((resolve, reject) => {
-    const speechConfig = sdk.SpeechConfig.fromSubscription(KEY, REGION);
-    speechConfig.speechSynthesisOutputFormat = sdk.SpeechSynthesisOutputFormat.Audio24Khz48KBitRateMonoMp3;
-    const audioConfig = sdk.AudioConfig.fromAudioFileOutput(outPath);
-    const synth = new sdk.SpeechSynthesizer(speechConfig, audioConfig);
-    const boundaries = [];
-    synth.wordBoundary = (_s, e) => {
-      // audioOffset is in 100-ns ticks. Azure also fires boundaries for
-      // punctuation marks, so keep the text to filter those out.
-      boundaries.push({ ms: Math.round(e.audioOffset / 10000), text: e.text || "" });
-    };
-    const isWord = (t) => /[\p{L}\p{N}]/u.test(t);
-    // Display tokens that carry a spoken word (drop punctuation-only tokens such
-    // as the lone "." left by a silent honorific), with their text for matching.
-    const realMap = map.filter((m) => isWord(spoken.slice(m.s, m.e))).map((m) => ({ di: m.di, text: spoken.slice(m.s, m.e) }));
-    synth.speakSsmlAsync(
-      buildSsml(spoken, lang, voiceName),
-      (result) => {
-        synth.close();
-        if (result.reason !== sdk.ResultReason.SynthesizingAudioCompleted) {
-          return reject(new Error("Synthesis failed: " + (result.errorDetails || result.reason)));
-        }
-        const realB = boundaries.filter((b) => isWord(b.text));
-        const w = alignWords(realMap, realB);
-        const durMs = Math.round((result.audioDuration || 0) / 10000) || (w.length ? w[w.length - 1][1] + 600 : 0);
-        resolve({ d: durMs, w, mismatch: realB.length !== realMap.length });
+// Synthesize one clip via the Azure Speech REST endpoint (plain HTTPS). We use
+// REST instead of the SDK on purpose: the SDK streams over a WebSocket, which is
+// blocked on some networks and there silently produces 0-byte files. REST returns
+// the COMPLETE mp3 in the response body, so we only ever write a fully-formed clip
+// — a failure throws and never touches the existing file.
+//
+// REST gives no word-boundary timings. For the normalization / lexicon / pause
+// passes the clip hash is unchanged, so the PREVIOUS manifest timings remain
+// valid and are reused; brand-new clips fall back to an even-spread estimate.
+async function synthesize(spoken, lang, map, outPath, voiceName, { prevMeta = null, timeoutMs = 20000 } = {}) {
+  const isWord = (t) => /[\p{L}\p{N}]/u.test(t);
+  const realMap = map.filter((m) => isWord(spoken.slice(m.s, m.e))).map((m) => ({ di: m.di }));
+
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  let buf;
+  try {
+    const res = await fetch(TTS_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Ocp-Apim-Subscription-Key": KEY,
+        "Content-Type": "application/ssml+xml; charset=utf-8",
+        "X-Microsoft-OutputFormat": "audio-24khz-48kbitrate-mono-mp3",
+        "User-Agent": "prophets-journey",
       },
-      (err) => { synth.close(); reject(err); }
-    );
-  });
+      body: Buffer.from(buildSsml(spoken, lang, voiceName), "utf8"),
+      signal: ctrl.signal,
+    });
+    if (!res.ok) throw new Error(`REST TTS HTTP ${res.status}: ${(await res.text().catch(() => "")).slice(0, 140)}`);
+    buf = Buffer.from(await res.arrayBuffer());
+  } finally { clearTimeout(timer); }
+  if (!buf || buf.length < MIN_MP3_BYTES) throw new Error(`empty output (${buf ? buf.length : 0}B) — existing clip kept`);
+
+  // Reuse prior timings if present (hash-stable passes); else estimate duration
+  // from a 48 kbit/s mono mp3 (bits / 48 kbit = ms) and spread words evenly.
+  const durMs = (prevMeta && prevMeta.d) || Math.max(400, Math.round((buf.length * 8) / 48));
+  const w = (prevMeta && Array.isArray(prevMeta.w) && prevMeta.w.length) ? prevMeta.w : evenTimings(realMap, durMs);
+
+  // Atomic write: temp file -> rename, so outPath is only ever a complete clip.
+  const tmpPath = outPath + ".part";
+  fs.writeFileSync(tmpPath, buf);
+  fs.renameSync(tmpPath, outPath);
+  return { d: durMs, w, mismatch: false, estimated: !(prevMeta && prevMeta.w && prevMeta.w.length) };
 }
 
 // --- enumerate every clip --------------------------------------------------
@@ -248,17 +302,18 @@ async function main() {
   const entries = [...clips.entries()];
   console.log(`Voices: en=${VOICE.en}, ur(m)=${VOICE.ur}, ur(f)=${VOICE.ur_f} | ${entries.length} unique clips total.`);
 
-  let done = 0, made = 0, skipped = 0, mismatches = 0, failed = 0;
+  let done = 0, made = 0, skipped = 0, estimated = 0, failed = 0;
+  const timeoutMs = SDK_TIMEOUT != null ? SDK_TIMEOUT : 20000;
   for (const [key, clip] of entries) {
     const mp3 = path.join(OUT_DIR, key + ".mp3");
     if (!FORCE && fs.existsSync(mp3) && manifest[key]) { skipped++; continue; }
     if (made >= LIMIT) break;
     try {
-      const meta = await synthesize(clip.spoken, clip.lang, clip.map, mp3, clip.voiceName);
+      const meta = await synthesize(clip.spoken, clip.lang, clip.map, mp3, clip.voiceName, { prevMeta: manifest[key] || null, timeoutMs });
       manifest[key] = { d: meta.d, w: meta.w, l: clip.lang };
-      if (meta.mismatch) mismatches++;
+      if (meta.estimated) estimated++;
       made++;
-      process.stdout.write(`  ✓ ${made}/${entries.length - skipped} ${key} (${clip.lang}, ${meta.d}ms, ${meta.w.length}w)${meta.mismatch ? " ~timing" : ""}\n`);
+      process.stdout.write(`  ✓ ${made}/${entries.length - skipped} ${key} (${clip.lang}, ${meta.d}ms, ${meta.w.length}w)${meta.estimated ? " ~est-timing" : ""}\n`);
       if (made % 10 === 0) fs.writeFileSync(manifestPath, JSON.stringify(manifest));
     } catch (e) {
       failed++;
@@ -277,7 +332,9 @@ async function main() {
   }
 
   fs.writeFileSync(manifestPath, JSON.stringify(manifest));
-  console.log(`Done. made=${made} skipped=${skipped} failed=${failed} timingMismatches=${mismatches}`);
+  console.log(`Done. made=${made} skipped=${skipped} failed=${failed} estTimings=${estimated}`);
+  if (failed) console.log(`Note: ${failed} clip(s) failed — their existing audio was left untouched.`);
+  if (estimated) console.log(`Note: ${estimated} new clip(s) used estimated word timings (REST gives none); highlighting is approximate on those.`);
   console.log(`Manifest: ${manifestPath} (${Object.keys(manifest).length} clips)`);
 }
 

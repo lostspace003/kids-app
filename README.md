@@ -9,17 +9,17 @@ Built from a Claude Design prototype (see `project/` and `chats/`). Implemented 
 - **The journey** — an account-gated child profile, a vertical zig-zag journey map (lock / current / done states, Noor + badge counters), and the cinematic stage.
 - **Living, moving scenes** — the camera travels and zooms as you progress, over a continuous slow "ken-burns" drift and a soft fade as each new scene arrives, so the background never feels static. Per-terrain animated silhouettes (Nuh's ark, Yunus's whale, the Kaaba, Ibrahim's fire, a starfield, rain, drifting clouds, birds…), a fixed lantern as "you," and a guiding Hudhud bird.
 - **Story loop per prophet** — Arrive → multi-chapter Story → moral Decision → result → modern "apply it today" scenario → result → quick **recap quiz** → Reward.
-- **Studio-quality narration (Azure Speech)** — warm female voices (`en-US-JennyNeural` for English, `ur-PK-UzmaNeural` for Urdu) are **pre-generated** to static `.mp3` files with SSML pauses, then played back with word-by-word highlighting driven by Azure's word-boundary timings. Falls back to the browser Web Speech voice for any missing clip.
+- **Studio-quality narration (Azure Speech)** — warm voices (`en-US-JennyNeural` for English; `ur-PK-AsadNeural` male / `ur-PK-UzmaNeural` female for Urdu) are **pre-generated** to static `.mp3` files with SSML pauses, then played back with word-by-word highlighting driven by Azure's word-boundary timings. A ↩ previous-slide and ↻ replay control ride the story card. Falls back to the browser Web Speech voice for any missing clip.
 - **Gamification** — Noor points + level ladder, 1–3 ⭐ per prophet (based on good choices), a collectible **badge gallery**, a daily **🔥 streak**, a recap quiz, plus confetti and gentle WebAudio chimes on celebrations.
 - **Leaderboard** — a child-friendly board ranked by a blended **score = Noor + (🔥 streak × 10)** (an ⓘ icon explains it in-app). Each entry shows the child's **first name + age** with a fun mascot icon — never a photo, surname, or country — and duplicate first names are auto-disambiguated. A parent can hide their child via a **PIN-protected opt-out**.
 - **Accounts & privacy** — a parent signs up with email + a one-time code, creates one child profile, and can **change password** or **permanently delete the account** (and all data) from the in-app menu. Hosted privacy policy at `/privacy`.
-- **Bilingual** — Roman-Urdu by default, English via the 🌐 toggle. Progress is saved server-side per account (guests run locally for one preview story).
+- **Bilingual** — Roman-Urdu by default, English via the 🌐 toggle. English mode uses familiar Biblical prophet names (Abraham, Moses, Noah…); Urdu keeps the Arabic names (Ibrahim, Musa, Nuh…). Progress is saved server-side per account (guests run locally for one preview story).
 
 ## Narration audio pipeline
 
 The narration is **static, pre-generated audio** (committed under `public/audio/`), not synthesized live in the browser.
 
-- `scripts/generate-audio.mjs` enumerates every narratable beat (both languages × both travellers), builds the exact spoken string via `app/lib/narration.js` (shared with the runtime so a content hash matches), calls **Azure Speech** with SSML (`<break>` pauses, `<prosody>` rate, friendly style), and writes `public/audio/<hash>.mp3` + `public/audio/manifest.json` (per-clip duration + word-boundary timings). Identical text is hashed once, so shared lines aren't duplicated.
+- `scripts/generate-audio.mjs` enumerates every narratable beat (both languages × both travellers), builds the exact spoken string via `app/lib/narration.js` (shared with the runtime so a content hash matches), and synthesises it through the **Azure Speech REST endpoint** with SSML (`<break>` pauses, `<prosody>` rate, friendly style). For Urdu it also normalises stray Arabic presentation-form glyphs and applies a small harakat-disambiguated pronunciation lexicon, so names and words are voiced correctly. It writes `public/audio/<hash>.mp3` + `public/audio/manifest.json` (per-clip duration + word-boundary timings); identical text is hashed once, so shared lines aren't duplicated. Each clip is written to a temp file and promoted only when it holds valid audio, so a failed synth never corrupts an existing clip.
 - Regenerate (e.g. after editing story text or to change voices):
 
   ```bash
@@ -57,31 +57,3 @@ npm run build && npm run start   # production
 - `public/audio/` — generated `.mp3` clips + `manifest.json` (committed)
 - Store-submission guides: `PLAY-STORE-LISTING.md`, `BUILD-ANDROID-APK.md`, `BUILD-IOS-APP.md`
 - `project/`, `chats/` — the original Claude Design handoff bundle (kept for reference)
-
----
-
-# CODING AGENTS: READ THIS FIRST
-
-This is a **handoff bundle** from Claude Design (claude.ai/design).
-
-A user mocked up designs in HTML/CSS/JS using an AI design tool, then exported this bundle so a coding agent can implement the designs for real.
-
-## What you should do — IMPORTANT
-
-**Read the chat transcripts first.** There are 1 chat transcript(s) in `chats/`. The transcripts show the full back-and-forth between the user and the design assistant — they tell you **what the user actually wants** and **where they landed** after iterating. Don't skip them. The final HTML files are the output, but the chat is where the intent lives.
-
-**Read `project/Prophets Journey.dc.html` in full.** The user had this file open when they triggered the handoff, so it's almost certainly the primary design they want built. Read it top to bottom — don't skim. Then **follow its imports**: open every file it pulls in (shared components, CSS, scripts) so you understand how the pieces fit together before you start implementing.
-
-**If anything is ambiguous, ask the user to confirm before you start implementing.** It's much cheaper to clarify scope up front than to build the wrong thing.
-
-## About the design files
-
-The design medium is **HTML/CSS/JS** — these are prototypes, not production code. Your job is to **recreate them pixel-perfectly** in whatever technology makes sense for the target codebase (React, Vue, native, whatever fits). Match the visual output; don't copy the prototype's internal structure unless it happens to fit.
-
-**Don't render these files in a browser or take screenshots unless the user asks you to.** Everything you need — dimensions, colors, layout rules — is spelled out in the source. Read the HTML and CSS directly; a screenshot won't tell you anything they don't.
-
-## Bundle contents
-
-- `README.md` — this file
-- `chats/` — conversation transcripts (read these!)
-- `project/` — the `Islamic Prophet Learning Journey` project files (HTML prototypes, assets, components)

@@ -13,8 +13,8 @@
 // the English voice says them with proper, respectful pronunciation rather than
 // an anglicised reading (e.g. "Aa-dam", not "ADD-uhm").
 export const PRON = {
-  "allah": "Al-laah", "bismillah": "Bis-mil-laah", "alhamdulillah": "Al-ham-doo-lil-laah",
-  "mashaallah": "Maa-shaa Al-laah", "subhanallah": "Sub-haan Al-laah", "inshaallah": "In-shaa Al-laah",
+  "allah": "Al-lauh", "bismillah": "Bis-mil-lauh", "alhamdulillah": "Al-ham-doo-lil-lauh",
+  "mashaallah": "Maa-shaa Al-lauh", "subhanallah": "Sub-haan Al-lauh", "inshaallah": "In-shaa Al-lauh",
   "du'a": "doo-aah", "dua": "doo-aah", "akhlaq": "akh-laaq", "kaaba": "Kaa-bah",
   "barakah": "ba-ra-kah", "quran": "Qur-aan", "qur'an": "Qur-aan", "noor": "noor",
   "jameel": "ja-meel", "sabr": "saber", "tawheed": "taw-heed", "huzaifa": "Hu-zay-fah",
@@ -144,6 +144,20 @@ export const NAME_UR_FULL = {
   21: "یونس", 22: "زکریا", 23: "یحییٰ", 24: "عیسیٰ", 25: "محمد",
 };
 
+// Biblical / English forms of the prophet names, used ONLY in English mode
+// (the journey/story, map node, and title). Urdu mode keeps the Arabic names.
+// Prophets without a widely-accepted Biblical equivalent (Hud, Salih, Shu'ayb,
+// Dhul-Kifl) and those that are the same (Adam, Muhammad) are intentionally
+// absent — callers fall back to the prophet's default `name`.
+export const EN_NAME = {
+  2: "Enoch", 3: "Noah", 6: "Abraham", 7: "Lot", 8: "Ishmael",
+  9: "Isaac", 10: "Jacob", 11: "Joseph", 12: "Job", 14: "Moses",
+  15: "Aaron", 17: "David", 18: "Solomon", 19: "Elijah", 20: "Elisha",
+  21: "Jonah", 22: "Zechariah", 23: "John", 24: "Jesus",
+};
+// English display/spoken name for a prophet record.
+export function enName(d) { return EN_NAME[d.id] || d.name; }
+
 export function storytellerWrapScript({ sub, gender, panelsLen, panel, decGood, modGood }) {
   const t = termFor(gender, true);
   let prefix = "", suffix = "";
@@ -153,7 +167,7 @@ export function storytellerWrapScript({ sub, gender, panelsLen, panel, decGood, 
     const N = panelsLen, p = panel;
     if (p === 0) prefix = `پاس آؤ، ${t}، اور دل لگا کر سنو۔ `;
     else if (p === Math.floor(N / 2)) prefix = `اب ذرا آنکھیں بند کر کے یہ منظر سوچو۔ `;
-    else if (p === N - 1) suffix = ` اِسے اپنے دل میں نرمی سے بسا لو۔`;
+    else if (p === N - 1) suffix = ` اِس بات کو اپنے دل میں نرمی سے بسا لو۔`;
   } else if (sub === "decision") {
     prefix = `اب کہانی تمہاری طرف مڑتی ہے۔ `;
   } else if (sub === "dres") {
@@ -228,13 +242,13 @@ export function narrationForBeat({ d, u, us, lang, gender, sub, panel = 0, picke
   const C = d;
   const dec = d.decision, mod = d.modern;
   let body = "";
-  if (sub === "arrive") body = arriveText({ gender, lang, prophetName: d.name, honor: d.honor, arrive: C.arrive });
+  if (sub === "arrive") body = arriveText({ gender, lang, prophetName: enName(d), honor: d.honor, arrive: C.arrive });
   else if (sub === "story") body = C.panels[panel];
   else if (sub === "decision") body = dec.q;
   else if (sub === "dres") body = dec[picked].r;
   else if (sub === "modern") body = mod.q;
   else if (sub === "mres") body = mod[picked].r;
-  else if (sub === "reward") body = rewardText({ gender, lang, prophetName: d.name, honor: d.honor, lesson: (C.lesson || d.lesson) });
+  else if (sub === "reward") body = rewardText({ gender, lang, prophetName: enName(d), honor: d.honor, lesson: (C.lesson || d.lesson) });
 
   const { prefix, suffix } = storytellerWrap({
     sub, gender, lang,

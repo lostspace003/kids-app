@@ -148,7 +148,7 @@ export default function AuthFlow({ onAuthed, onGuest }) {
               👀 Just see a story first
             </button>
             <div style={{ textAlign: "center", marginTop: 8, color: C.dim, fontSize: 12.5 }}>
-              Try Prophet 1 free — log in to continue and earn Noor.
+              Try 1 Prophet Story for free — log in to continue and earn Noor.
             </div>
           </>
         )}

@@ -16,7 +16,7 @@ export const PROPHET_UR = {
     decision: { q: "Aap se ghalti se koi cheez toot jaati hai jise chhoone se mana kiya gaya tha. Aap kya karenge?",
       a: { t: "Chhupa dein aur ummeed karein ke kisi ko pata na chale", r: "Chhupane se fikr aur barhti chali gayi. Adam (AS) ne humein ek bahadur aur halka raasta dikhaya." },
       b: { t: "Jaa kar maafi maangein aur sach bol dein", r: "Bohat khoob! Adam (AS) ki tarah, sachaai ke saath laut aana sukoon aur maafi le aata hai." } },
-    modern: { q: "Ghar mein aap ki gaind se guldaan toot jaata hai. Ammi aati hain aur poochti hain ke kya hua.",
+    modern: { q: "Ghar mein aap ke ball se guldaan toot jaata hai. Ammi aati hain aur poochti hain ke kya hua.",
       a: { t: "'Hana ne kiya!' — apni behan par ilzaam", r: "Doosron par ilzaam lagana pehli ghalti ke oopar doosri ghalti rakh deta hai." },
       b: { t: "'Maaf kijiye, ye main tha. Main saaf karne mein madad karunga.'", r: "Yehi Adam (AS) ka dil hai — sachcha aur bahadur. Maafi maangna kamzori nahi, taqat hai." } }
   },

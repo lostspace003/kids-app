@@ -47,3 +47,16 @@ next-env.d.ts
 
 # showcase / marketing assets (not part of the app)
 /showcase
+
+# Serena (MCP tooling) local config
+/.serena
+
+# dev reference shots + voice comparison samples (not part of the app)
+/ss
+/urdu-voice-samples
+
+# review-only TTS sample clips
+/public/samples
+
+# improvement working notes (handwritten scans + fix spec)
+/improvements-required

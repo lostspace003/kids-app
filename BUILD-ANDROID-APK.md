@@ -35,8 +35,10 @@ Recommended flow:
 1. Add the manifest + icon links + the asset-links route to the app → deploy.
 2. Run PWABuilder → download → it gives you `assetlinks.json` (contains your
    app's SHA-256 signing fingerprint).
-3. Host that file's contents at **`/.well-known/assetlinks.json`** on the site →
-   deploy.
+3. A placeholder already exists at **`public/.well-known/assetlinks.json`** (the
+   package name `com.gennoor.safaranbiya` is pre-filled). Just replace
+   `REPLACE_WITH_SHA256_FROM_PWABUILDER` with the fingerprint from step 2 →
+   deploy. It's then served at **`/.well-known/assetlinks.json`**.
 4. Reinstall the APK → it opens full-screen, no browser bar.
 
 (The brand icons already exist under `public/brand/png/` — `icon-192.png`,

@@ -13,6 +13,7 @@ import {
   lineNarration,
   arriveText,
   rewardText,
+  enName,
 } from "../lib/narration";
 import { STREAK_WEIGHT } from "../lib/leaderboard";
 
@@ -310,6 +311,39 @@ export default class ProphetsJourney extends React.Component {
   }
   prevAyah() { if (this.state.ayahIdx > 0) { this.sfx("page"); this.setState({ ayahIdx: this.state.ayahIdx - 1, activeWord: -1 }); } }
 
+  // Step back one slide/beat, mirroring the forward flow. The quiz and reward
+  // are intentionally one-way (they award progress / reshuffle questions), so
+  // back is offered across the narrative + ayah beats only.
+  canGoBack() {
+    const st = this.state;
+    if (st.screen !== "stage") return false;
+    return ["story", "decision", "dres", "modern", "mres", "ayah", "quiz"].includes(st.sub);
+  }
+  back() {
+    const st = this.state; const d = this.curData(); if (!d) return;
+    const C = (st.lang === "ur" && PROPHET_UR[d.id]) || d;
+    const panelsLen = (C.panels || d.panels).length;
+    this.sfx("page");
+    if (st.sub === "story") {
+      if (st.panel > 0) this.setState({ panel: st.panel - 1, activeWord: -1 });
+      else this.setState({ sub: "arrive", activeWord: -1 });
+    } else if (st.sub === "decision") {
+      this.setState({ sub: "story", panel: panelsLen - 1, activeWord: -1 });
+    } else if (st.sub === "dres") {
+      this.setState({ sub: "decision", activeWord: -1 });
+    } else if (st.sub === "modern") {
+      this.setState({ sub: "dres", activeWord: -1 });
+    } else if (st.sub === "mres") {
+      this.setState({ sub: "modern", activeWord: -1 });
+    } else if (st.sub === "ayah") {
+      if (st.ayahIdx > 0) this.setState({ ayahIdx: st.ayahIdx - 1, activeWord: -1 });
+      else this.setState({ sub: "mres", activeWord: -1 });
+    } else if (st.sub === "quiz") {
+      const ayahLen = this.ayahList().length;
+      this.setState({ sub: "ayah", ayahIdx: Math.max(0, ayahLen - 1), quizPick: null, activeWord: -1 });
+    }
+  }
+
   // Mini-quiz recap: a few quick "remember this?" questions before the reward.
   toQuiz() {
     const d = this.curData(); const L = this.state.lang === "ur";
@@ -321,10 +355,10 @@ export default class ProphetsJourney extends React.Component {
     const oC1 = (L && PROPHET_UR[od1.id]) || od1;
     const lesson = C.lesson || d.lesson, wrongLesson = oC1.lesson || od1.lesson;
     const items = [
-      { q: L ? `${d.name} ${d.honor} ke safar ne humein kya sikhaya?` : `What did journeying with ${d.name} ${d.honor} teach us?`,
+      { q: L ? `${this.dispName(d)} ${d.honor} ke safar ne humein kya sikhaya?` : `What did journeying with ${this.dispName(d)} ${d.honor} teach us?`,
         opts: mix({ t: lesson, ok: true }, { t: wrongLesson, ok: false }) },
       { q: L ? "Yeh kis nabi ka safar tha?" : "Whose journey was this?",
-        opts: mix({ t: `${d.name} ${d.honor}`, ok: true }, { t: `${od2.name} ${od2.honor}`, ok: false }) },
+        opts: mix({ t: `${this.dispName(d)} ${d.honor}`, ok: true }, { t: `${this.dispName(od2)} ${od2.honor}`, ok: false }) },
     ];
     this.setState({ sub: "quiz", quiz: { items }, quizIdx: 0, quizPick: null, activeWord: -1 });
   }
@@ -415,6 +449,8 @@ export default class ProphetsJourney extends React.Component {
   }
   wordAt(ci) { let found = -1; for (const m of this._spkMap) { if (ci >= m.s) found = m.di; if (ci >= m.s && ci < m.e) { found = m.di; break; } } return found; }
   myName() { return this.state.profile && PROFILES[this.state.profile] ? PROFILES[this.state.profile].name : "friend"; }
+  // Displayed prophet name: Biblical/English in English mode, Arabic transliteration in Urdu.
+  dispName(d) { return this.state.lang === "en" ? enName(d) : d.name; }
   // Narration is gendered (beta/beti), never name-personalised — so the audio
   // is fully static (two variants). Falls back to "boy" wording if unknown.
   myGender() {
@@ -671,7 +707,7 @@ export default class ProphetsJourney extends React.Component {
     const gen = this.myGender();
     let v;
     if (st === "arrive") {
-      const greet = arriveText({ gender: gen, lang: this.state.lang, prophetName: d.name, honor: d.honor, arrive: C.arrive });
+      const greet = arriveText({ gender: gen, lang: this.state.lang, prophetName: this.dispName(d), honor: d.honor, arrive: C.arrive });
       v = { key: "arrive", tag: L ? "Pahunche" : "Arrive", icon: "✨", tagColor: "#f5c451", body: greet, primary: { label: L ? "Safar shuru karein ›" : "Begin the journey ›", on: () => this.beginStory() } };
     }
     else if (st === "story") { const last = this.state.panel >= C.panels.length - 1; v = { key: "story" + this.state.panel, tag: (L ? "Kahani · " : "The Story · ") + (this.state.panel + 1) + "/" + C.panels.length, icon: "📖", tagColor: "#9ec5ff", body: C.panels[this.state.panel], primary: { label: last ? (L ? "Aap kya karte? ›" : "What would you do? ›") : (L ? "Aage chalein ›" : "Continue ›"), on: () => this.nextPanel() } }; }
@@ -693,7 +729,7 @@ export default class ProphetsJourney extends React.Component {
       v = { key: "quiz" + this.state.quizIdx, tag: (L ? "Yaad hai? · " : "Remember? · ") + (this.state.quizIdx + 1) + "/" + (items.length || 1), icon: "🧠", tagColor: "#ffb86b", body: q.q,
         quizOpts: q.opts.map((o, i) => ({ letter: String.fromCharCode(65 + i), t: o.t, ok: o.ok, picked: picked === i, revealed: picked != null, onPick: () => this.pickQuiz(i) })) }; }
     else if (st === "reward") { const lesson = (C.lesson || d.lesson), badge = (C.badge || d.badge);
-      const body = rewardText({ gender: gen, lang: this.state.lang, prophetName: d.name, honor: d.honor, lesson });
+      const body = rewardText({ gender: gen, lang: this.state.lang, prophetName: this.dispName(d), honor: d.honor, lesson });
       const rewardPrimary = this.isGuest
         ? { label: L ? "Login karke jari rakhein ›" : "Log in to continue ›", on: () => this.requestLogin() }
         : { label: L ? "Safar jari rakhein ›" : "Continue your journey ›", on: () => this.backToMap() };
@@ -728,7 +764,7 @@ export default class ProphetsJourney extends React.Component {
       // On the "Your Journey" map, Muhammad ﷺ is honoured as رسول الله
       // (Messenger of Allah) in Arabic rather than the bare name.
       const nodeAr = d.special ? "رسول الله" : d.ar;
-      return { name: d.name, ar: nodeAr, epithet: d.epithet, btnStyle, medalStyle, medalText, labelStyle, dim, unlocked, done, stars, side, onClick: () => this.promptLang(d.id), onReset: done ? () => this.resetProphet(d.id) : null };
+      return { name: this.dispName(d), ar: nodeAr, epithet: d.epithet, btnStyle, medalStyle, medalText, labelStyle, dim, unlocked, done, stars, side, onClick: () => this.promptLang(d.id), onReset: done ? () => this.resetProphet(d.id) : null };
     });
     const ropeHeight = DATA.length * STEP + 40;
     // Badge gallery: earned badges fill the shelf, locked ones stay dim.
@@ -736,13 +772,13 @@ export default class ProphetsJourney extends React.Component {
     const badges = DATA.map((d) => {
       const done = completed.includes(d.id);
       const C = (L && PROPHET_UR[d.id]) || d;
-      return { icon: done ? d.badgeIcon : "🔒", label: done ? (C.badge || d.badge) : "", name: d.name, done };
+      return { icon: done ? d.badgeIcon : "🔒", label: done ? (C.badge || d.badge) : "", name: this.dispName(d), done };
     });
     const level = levelFor(st.progress.noor);
     const cur = this.curData(); let curVM = {}, scene = null, view = {}, sceneKey = "";
     if (cur) {
       const stepNames = { arrive: "Arrive", story: "Story", decision: "Choose", dres: "Choose", modern: "Today", mres: "Today", ayah: "Qur’an", quiz: "Recap", reward: "Reward" };
-      curVM = { name: cur.name, ar: cur.ar, honor: cur.honor, stepLabel: stepNames[st.sub] || "" };
+      curVM = { name: this.dispName(cur), ar: cur.ar, honor: cur.honor, stepLabel: stepNames[st.sub] || "" };
       const sk = cur.id + "|" + st.sub + "|" + st.panel;
       if (this._sk !== sk) { this._scene = this.buildScene(cur); this._sk = sk; }
       scene = this._scene; sceneKey = sk; view = this.buildView();
@@ -763,6 +799,7 @@ export default class ProphetsJourney extends React.Component {
       goProfile: () => this.goProfile(), cur: curVM, scene, view,
       hudhud: cur ? this.hudhudEl() : null, hudhudPos: showHud ? "top:84px;right:18px;" : "top:84px;right:18px;opacity:0;pointer-events:none;",
       backToMap: () => this.backToMap(),
+      back: () => this.back(), canBack: this.canGoBack(),
       cameraStyle, lantern: cur ? this.lantern() : null,
       muteIcon: st.muted ? "🔇" : "🔊", toggleMute: () => this.toggleMute(), replay: () => this.replay(),
       volume: st.volume, setVolume: (v) => this.setVolume(v),
@@ -851,7 +888,7 @@ export default class ProphetsJourney extends React.Component {
     ctx.textAlign = "center";
     ctx.fillStyle = "#f4eede"; ctx.font = "600 54px Fredoka, sans-serif"; ctx.fillText(prof ? prof.name : "", W / 2, 650);
     ctx.fillStyle = "#f5c451"; ctx.font = "700 42px Amiri, serif"; ctx.fillText(d.ar || "", W / 2, 720);
-    ctx.fillStyle = "#f4eede"; ctx.font = "600 40px Fredoka, sans-serif"; ctx.fillText(`${d.name} ${d.honor}`, W / 2, 786);
+    ctx.fillStyle = "#f4eede"; ctx.font = "600 40px Fredoka, sans-serif"; ctx.fillText(`${this.dispName(d)} ${d.honor}`, W / 2, 786);
     ctx.font = "60px serif"; for (let i = 0; i < 3; i++) { ctx.fillStyle = i < stars ? "#f5c451" : "rgba(255,255,255,.2)"; ctx.fillText("★", W / 2 - 80 + i * 80, 880); }
     ctx.fillStyle = "#bff5e2"; ctx.font = "600 36px Fredoka, sans-serif"; ctx.fillText(`${d.badgeIcon} ${d.badge}   ·   +${noor} Noor`, W / 2, 958);
     ctx.fillStyle = "rgba(244,238,222,.6)"; ctx.font = "500 30px Fredoka, sans-serif"; ctx.fillText("Safar-e-Anbiya · safar-anbiya.gennoor.com", W / 2, 1030);
@@ -1038,14 +1075,13 @@ export default class ProphetsJourney extends React.Component {
                 <input type="range" min="0" max="2" step="0.05" value={V.volume} onChange={(e) => V.setVolume(e.target.value)} aria-label="Volume" style={{ width: 72, accentColor: "#f5c451", cursor: "pointer" }} />
                 <span style={s("font-family:'Fredoka';font-size:12px;color:#f5c451;min-width:30px;text-align:right;")}>{V.volume.toFixed(1)}×</span>
               </div>
-              <button onClick={V.replay} className="ipj-round" title="Replay narration" style={s("cursor:pointer;flex:0 0 auto;width:42px;height:42px;border-radius:50%;border:1px solid rgba(255,255,255,.2);background:rgba(10,7,26,.4);color:#f4eede;font-size:18px;backdrop-filter:blur(6px);")}>↻</button>
             </div>
 
             <div style={s("position:absolute;z-index:9;" + V.hudhudPos)}>{V.hudhud}</div>
 
             <div style={s("position:absolute;left:0;right:0;bottom:0;z-index:12;display:flex;justify-content:center;padding:0 14px clamp(20px,5vh,46px);")}>
              <div style={s(`width:100%;max-width:640px;transition:${this.props.reduceMotion ? "none" : "transform 1.2s cubic-bezier(.4,.1,.2,1)"};transform:translate(${V.cardOffset.x}vw,${V.cardOffset.y}vh);`)}>
-              <div>
+              <div style={s("position:relative;")}>
               <div key={V.view.key} className="ipj-scroll" style={s("width:100%;max-height:calc(100dvh - 132px);overflow-y:auto;background:linear-gradient(180deg,rgba(31,22,58,.86),rgba(18,12,40,.94));border:1px solid rgba(245,196,81,.28);border-radius:24px;padding:clamp(14px,3.5vw,20px) clamp(15px,4vw,22px);backdrop-filter:blur(10px);box-shadow:0 16px 50px rgba(0,0,0,.5);animation:ipjRise .4s ease both;")}>
 
                 <div style={s("display:flex;align-items:center;gap:9px;margin-bottom:8px;")}>
@@ -1137,6 +1173,12 @@ export default class ProphetsJourney extends React.Component {
                 )}
 
               </div>
+              {/* Prev-slide (left) + replay-narration (right) ride the card's top
+                  edges so they move with the content as it shifts between beats. */}
+              {V.canBack && (
+                <button onClick={V.back} className="ipj-round" title={this.state.lang === "ur" ? "Pichhli slide" : "Previous slide"} style={s("position:absolute;left:6px;top:-30px;z-index:13;width:44px;height:44px;border-radius:50%;border:1px solid rgba(245,196,81,.45);background:rgba(10,7,26,.82);color:#f4eede;font-size:19px;line-height:1;cursor:pointer;backdrop-filter:blur(8px);box-shadow:0 6px 18px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;")}>↩</button>
+              )}
+              <button onClick={V.replay} className="ipj-round" title={this.state.lang === "ur" ? "Dobara sunein" : "Replay narration"} style={s("position:absolute;right:6px;top:-30px;z-index:13;width:44px;height:44px;border-radius:50%;border:1px solid rgba(245,196,81,.45);background:rgba(10,7,26,.82);color:#f4eede;font-size:19px;line-height:1;cursor:pointer;backdrop-filter:blur(8px);box-shadow:0 6px 18px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;")}>↻</button>
               </div>
              </div>
             </div>
