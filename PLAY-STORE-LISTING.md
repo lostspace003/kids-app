@@ -136,4 +136,34 @@ Also declare:
 - Confirm **no ads** (or, if you ever add ads, they must be families-appropriate).
 - Complete the **content rating** questionnaire (educational, no objectionable
   content → expect "Everyone").
-```
+
+---
+
+## Submission checklist (your steps in Play Console)
+
+Everything in this repo (listing copy, screenshots, icon, feature graphic,
+privacy policy, build guides) is ready. These remaining steps need your accounts,
+payment, and signing keys, so they can't be automated:
+
+- [ ] **Deploy the site** and confirm CI/CD is green, so
+      `https://safar-anbiya.gennoor.com` and `…/privacy` are live. (This deploy
+      also adds the new `handle` / `lbOptOut` / `lbPinHash` profile columns.)
+- [ ] **Play Console account** — create it ($25 one-time) and add the app.
+- [ ] **Build & upload the signed AAB** — follow `BUILD-ANDROID-APK.md` (TWA /
+      Bubblewrap). Keep the signing key safe; enable Play App Signing.
+- [ ] **Main store listing** — paste the title, short & full description, and
+      upload `playstore-screenshots/` (icon, feature graphic, 2–8 phone shots).
+- [ ] **Data safety form** — fill from the table above (declare email, name, DOB,
+      country, photo, app activity; encrypted in transit; deletion on request; no
+      ads/sharing for advertising). The leaderboard/guest/PIN add no new data.
+- [ ] **App content** — privacy policy URL, **content rating** questionnaire, and
+      join **Designed for Families** (target age groups include children).
+- [ ] **App access (demo account)** — login is required, so provide a reviewer
+      test email + password under *App content → App access*. **Most common
+      rejection cause if missing.**
+- [ ] **Ads declaration** — "Contains ads: No" (ads are website-only). Set the
+      AdSense ID later per `ADS-SETUP.md` if you want site ads.
+- [ ] **iOS (optional)** — same listing assets; follow `BUILD-IOS-APP.md`
+      (Codemagic, no Mac needed). iPhone screenshots: re-run the capture script
+      with the iPhone viewport noted in that guide.
+- [ ] **Submit for review** — Android review ~1–3 days.
