@@ -156,7 +156,7 @@ export const dbAzure = {
   // ---- leaderboard feed (all profiles + all progress) ----
   async getAllProfiles() {
     const pool = await getPool();
-    const r = await pool.request().query("SELECT userId, gender, dob FROM dbo.profiles");
+    const r = await pool.request().query("SELECT userId, gender, dob, handle, avatarSource, avatarKey FROM dbo.profiles");
     return r.recordset;
   },
   async getAllProgress() {

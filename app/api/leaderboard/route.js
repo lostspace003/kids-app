@@ -5,6 +5,7 @@
 import { db } from "@/app/lib/server/db.js";
 import { getCurrentUser } from "@/app/lib/server/session.js";
 import { json } from "@/app/lib/server/http.js";
+import { mediaUrl } from "@/app/lib/server/storage.js";
 import { buildLeaderboard } from "@/app/lib/leaderboard.js";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +28,9 @@ export async function GET() {
         gender: p.gender === "girl" ? "girl" : "boy",
         dob: p.dob || null,
         handle: p.handle || null, // custom handle if the parent set one
+        // Ghibli cartoon avatar (from an uploaded photo) — never the real photo.
+        // buildLeaderboard only surfaces it for children ≤10.
+        avatar: p.avatarSource === "photo" && p.avatarKey ? mediaUrl(p.avatarKey) : null,
         score: Number(prog.noor) || 0,
         completed: Array.isArray(prog.completed) ? prog.completed.length : 0,
       };

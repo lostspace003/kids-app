@@ -135,6 +135,23 @@ export function normalizeHandle(raw) {
   return h;
 }
 
+// Age as of the most recent 1 June. The leaderboard avatar rule (cartoon for
+// ≤10, icon above 10) only flips once a year on this date, so a child crossing
+// the threshold mid-year keeps a stable display until the next 1 June. The app
+// recomputes this server-side on every open, so it updates by itself.
+export function ageAtLastJune1(dob, now = new Date()) {
+  if (!dob) return 999;
+  const d = new Date(dob);
+  if (isNaN(d)) return 999;
+  const y = now.getUTCFullYear();
+  const june1 = new Date(Date.UTC(y, 5, 1)); // month 5 = June
+  const ref = now >= june1 ? june1 : new Date(Date.UTC(y - 1, 5, 1));
+  let a = ref.getUTCFullYear() - d.getUTCFullYear();
+  const m = ref.getUTCMonth() - d.getUTCMonth();
+  if (m < 0 || (m === 0 && ref.getUTCDate() < d.getUTCDate())) a--;
+  return a;
+}
+
 // Whole years old today (server-side tiebreaker only).
 export function ageYears(dob) {
   if (!dob) return 999; // unknown DOB ranks last among ties (treated as oldest)
@@ -171,10 +188,15 @@ export function buildLeaderboard(rows, meId = null, limit = 200) {
 
   const toPublic = (e) => {
     const id = publicIdentity(e.userId, e.gender);
+    // Show the Ghibli cartoon avatar only for children ≤10 (as of 1 June) who
+    // have one. Older children, and anyone on a default avatar, show the icon.
+    // Real photos are never included here.
+    const showAvatar = !!e.avatar && ageAtLastJune1(e.dob) <= 10;
     return {
       rank: e.rank,
       handle: normalizeHandle(e.handle) || id.handle, // custom (edited) wins
       icon: id.icon,
+      avatar: showAvatar ? e.avatar : null,
       gender: e.gender === "girl" ? "girl" : "boy",
       score: e.score,
       completed: e.completed || 0,

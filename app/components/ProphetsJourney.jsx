@@ -1177,7 +1177,7 @@ export default class ProphetsJourney extends React.Component {
                   {V.lbData.entries.map((e, i) => (
                     <button key={i} onClick={() => V.selectLbEntry(e)} className="ipj-choice" style={s(`cursor:pointer;display:flex;align-items:center;gap:12px;text-align:left;border:1px solid ${e.isMe ? "rgba(245,196,81,.55)" : "rgba(255,255,255,.12)"};background:${e.isMe ? "rgba(245,196,81,.12)" : "rgba(255,255,255,.04)"};border-radius:14px;padding:10px 12px;color:#f4eede;`)}>
                       <span style={s(`flex:0 0 auto;width:30px;text-align:center;font-family:'Fredoka';font-weight:700;font-size:16px;color:${e.rank <= 3 ? "#f5c451" : "rgba(244,238,222,.7)"};`)}>{e.rank <= 3 ? ["🥇", "🥈", "🥉"][e.rank - 1] : ("#" + e.rank)}</span>
-                      <span style={s(`flex:0 0 auto;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;border:2px solid ${e.gender === "girl" ? "rgba(245,111,161,.7)" : "rgba(245,196,81,.7)"};background:${e.gender === "girl" ? "rgba(245,111,161,.12)" : "rgba(245,196,81,.12)"};`)}>{e.icon}</span>
+                      <span style={s(`flex:0 0 auto;width:40px;height:40px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:22px;border:2px solid ${e.gender === "girl" ? "rgba(245,111,161,.7)" : "rgba(245,196,81,.7)"};background:${e.gender === "girl" ? "rgba(245,111,161,.12)" : "rgba(245,196,81,.12)"};`)}>{e.avatar ? <img src={asset(e.avatar)} alt="" style={s("width:100%;height:100%;object-fit:cover;")} /> : e.icon}</span>
                       <span style={s("flex:1;min-width:0;")}>
                         <span style={s("display:block;font-family:'Fredoka';font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;")}>{e.handle}{e.isMe ? " (You)" : ""}</span>
                         <span style={s("display:block;font-size:12px;opacity:.6;")}>{e.completed}/25 lands</span>
@@ -1192,7 +1192,7 @@ export default class ProphetsJourney extends React.Component {
                 <div style={s("margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.1);")}>
                   <div style={s("display:flex;align-items:center;gap:12px;border:1px solid rgba(245,196,81,.5);background:rgba(245,196,81,.12);border-radius:14px;padding:10px 12px;")}>
                     <span style={s("width:30px;text-align:center;font-family:'Fredoka';font-weight:700;font-size:16px;color:#f5c451;")}>#{V.lbData.me.rank}</span>
-                    <span style={s("font-size:22px;")}>{V.lbData.me.icon}</span>
+                    <span style={s("flex:0 0 auto;width:30px;height:30px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:22px;")}>{V.lbData.me.avatar ? <img src={asset(V.lbData.me.avatar)} alt="" style={s("width:100%;height:100%;object-fit:cover;")} /> : V.lbData.me.icon}</span>
                     <span style={s("flex:1;font-family:'Fredoka';font-weight:600;font-size:15px;")}>{V.lbData.me.handle} (You)</span>
                     <span style={s("color:#f5c451;font-family:'Fredoka';font-weight:700;")}>✦ {V.lbData.me.score}</span>
                   </div>
@@ -1203,7 +1203,7 @@ export default class ProphetsJourney extends React.Component {
               {V.lbSelected && (
                 <div onClick={() => V.selectLbEntry(null)} style={s("position:absolute;inset:0;z-index:2;background:rgba(8,5,20,.88);border-radius:22px;display:flex;align-items:center;justify-content:center;padding:20px;")}>
                   <div onClick={(e) => e.stopPropagation()} style={s("width:100%;max-width:300px;text-align:center;background:rgba(24,17,52,.99);border:1px solid rgba(245,196,81,.3);border-radius:18px;padding:22px 18px;")}>
-                    <div style={s(`width:84px;height:84px;margin:0 auto 10px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:44px;border:3px solid ${V.lbSelected.gender === "girl" ? "rgba(245,111,161,.8)" : "rgba(245,196,81,.8)"};background:${V.lbSelected.gender === "girl" ? "rgba(245,111,161,.14)" : "rgba(245,196,81,.14)"};`)}>{V.lbSelected.icon}</div>
+                    <div style={s(`width:84px;height:84px;margin:0 auto 10px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:44px;border:3px solid ${V.lbSelected.gender === "girl" ? "rgba(245,111,161,.8)" : "rgba(245,196,81,.8)"};background:${V.lbSelected.gender === "girl" ? "rgba(245,111,161,.14)" : "rgba(245,196,81,.14)"};`)}>{V.lbSelected.avatar ? <img src={asset(V.lbSelected.avatar)} alt="" style={s("width:100%;height:100%;object-fit:cover;")} /> : V.lbSelected.icon}</div>
                     <div style={s("font-family:'Fredoka';font-weight:700;font-size:20px;color:#f4eede;")}>{V.lbSelected.handle}</div>
                     <div style={s("font-size:13px;opacity:.6;margin-top:2px;")}>Rank #{V.lbSelected.rank}</div>
                     <div style={s("display:flex;justify-content:center;gap:22px;margin:16px 0;")}>
