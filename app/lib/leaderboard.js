@@ -30,6 +30,15 @@ export function firstNameOf(childName) {
   return clean.charAt(0).toUpperCase() + clean.slice(1);
 }
 
+// Initial of the last name token (uppercased), or "" when only one name/nickname
+// is on file. Used to disambiguate two children who share a first name.
+export function lastInitialOf(childName) {
+  const toks = String(childName || "").trim().split(/\s+/).filter(Boolean);
+  if (toks.length < 2) return "";
+  const t = toks[toks.length - 1].replace(/[^\p{L}]/gu, "");
+  return t ? t.charAt(0).toUpperCase() : "";
+}
+
 // Fun mascot icons, split into boy/girl pools (~50 each ≈ 100 total). They are
 // wholesome animals / nature / space symbols — never a real photo.
 export const ICONS = {
@@ -214,6 +223,33 @@ export function buildLeaderboard(rows, meId = null, limit = 200) {
     prev = e;
   });
 
+  // Disambiguate identical first names so two children never show the exact
+  // same label. Prefer a last-name initial ("Yusuf B."); if that still collides
+  // or no surname is on file, append a small number ("Yusuf 2"). Computed over
+  // the whole ranked set so labels are stable regardless of the display limit.
+  const byFirst = new Map();
+  for (const e of ranked) {
+    e._first = firstNameOf(e.childName);
+    if (!e._first) continue; // nameless rows fall back to their handle
+    const k = e._first.toLowerCase();
+    if (!byFirst.has(k)) byFirst.set(k, []);
+    byFirst.get(k).push(e);
+  }
+  for (const group of byFirst.values()) {
+    if (group.length < 2) {
+      group[0]._displayName = group[0]._first;
+      continue;
+    }
+    const used = new Map(); // label -> times seen (in rank order)
+    for (const e of group) {
+      const li = lastInitialOf(e.childName);
+      const label = li ? `${e._first} ${li}.` : e._first;
+      const n = (used.get(label) || 0) + 1;
+      used.set(label, n);
+      e._displayName = n > 1 ? `${label} ${n}` : label;
+    }
+  }
+
   const toPublic = (e) => {
     const id = publicIdentity(e.userId, e.gender);
     // Show the Ghibli cartoon avatar only for children ≤10 (as of 1 June) who
@@ -223,7 +259,7 @@ export function buildLeaderboard(rows, meId = null, limit = 200) {
     const age = ageYears(e.dob);
     return {
       rank: e.rank,
-      name: firstNameOf(e.childName) || null, // first name only; never the surname
+      name: e._displayName || null, // first name (de-duplicated); never the full surname
       age: age >= 0 && age < 120 ? age : null, // null when DOB unknown/invalid
       handle: normalizeHandle(e.handle) || id.handle, // fallback identity
       icon: id.icon,
