@@ -8,8 +8,10 @@
 // a dummy profile, no login) so the whole interactive flow is reachable.
 //
 // Run the dev server first (npm run dev), then:  node scripts/capture-screenshots.mjs
-//   --lang en|ur   (UI language for map/stage; default en for the store listing)
+//   --lang en|ur          (UI language for map/stage; default en for the store listing)
 //   --base http://localhost:3000
+//   --device play|ios67|ios65  (output size; default play = 1080×1920.
+//                               ios67 = 1290×2796, ios65 = 1242×2688 for Apple)
 // ---------------------------------------------------------------------------
 
 import fs from "node:fs";
@@ -19,8 +21,6 @@ import puppeteer from "puppeteer-core";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
-const OUT = path.join(ROOT, "playstore-screenshots");
-const FINAL = path.join(OUT, "final");
 
 const args = process.argv.slice(2);
 const argVal = (f, d) => { const i = args.indexOf(f); return i >= 0 ? args[i + 1] : d; };
@@ -28,7 +28,21 @@ const LANG = argVal("--lang", "en");
 const BASE = argVal("--base", "http://localhost:3000");
 const CHROME = process.env.CHROME_PATH || "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
 
-const VIEWPORT = { width: 360, height: 640, deviceScaleFactor: 3, isMobile: true, hasTouch: true };
+// Output target. Each preset's CSS size × deviceScaleFactor 3 produces the exact
+// pixel dimensions each store requires (we always render at scale factor 3):
+//   play   360×640 → 1080×1920  (Google Play phone)
+//   ios67  430×932 → 1290×2796  (Apple 6.7" iPhone — required size)
+//   ios65  414×896 → 1242×2688  (Apple 6.5" iPhone — required size)
+// Choose with --device play|ios67|ios65 (default play).
+const DEVICES = {
+  play:  { dir: "playstore-screenshots", w: 360, h: 640 },
+  ios67: { dir: "ios-screenshots/6.7",   w: 430, h: 932 },
+  ios65: { dir: "ios-screenshots/6.5",   w: 414, h: 896 },
+};
+const DEVICE = DEVICES[argVal("--device", "play")] || DEVICES.play;
+const OUT = path.join(ROOT, DEVICE.dir);
+const FINAL = path.join(OUT, "final");
+const VIEWPORT = { width: DEVICE.w, height: DEVICE.h, deviceScaleFactor: 3, isMobile: true, hasTouch: true };
 
 fs.mkdirSync(OUT, { recursive: true });
 fs.mkdirSync(FINAL, { recursive: true });
@@ -193,7 +207,7 @@ async function main() {
   }
 
   await browser.close();
-  process.stdout.write(`\nDone. ${shots.length} screenshots written to playstore-screenshots/.\n`);
+  process.stdout.write(`\nDone. ${shots.length} screenshots (${VIEWPORT.width * 3}×${VIEWPORT.height * 3}) written to ${DEVICE.dir}/.\n`);
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

@@ -156,13 +156,15 @@ In **App Store Connect → your app**:
 - **App Privacy**: answer the data-collection questionnaire (declare what your site
   collects — if accounts/OTP, declare email; if ads, declare advertising data).
 - **Screenshots**: required sizes — **6.7" iPhone (1290×2796)** and
-  **6.5" iPhone (1242×2688)** at minimum. You can produce these on Windows:
-  open your site in Chrome DevTools device mode at those resolutions and capture,
-  or reuse/resize your existing Play Store screenshots. Easiest: run the repo's
-  `scripts/capture-screenshots.mjs` against a running dev server — it captures the
-  full flow headlessly. For the iPhone sizes, change the `VIEWPORT` near the top of
-  that script (e.g. `{ width: 430, height: 932, deviceScaleFactor: 3 }` → 1290×2796)
-  and re-run.
+  **6.5" iPhone (1242×2688)** at minimum. The repo's `scripts/capture-screenshots.mjs`
+  generates both at the exact pixel sizes — start the dev server (`npm run dev`),
+  then run:
+  ```
+  node scripts/capture-screenshots.mjs --device ios67   # → ios-screenshots/6.7  (1290×2796)
+  node scripts/capture-screenshots.mjs --device ios65   # → ios-screenshots/6.5  (1242×2688)
+  ```
+  Upload the numbered shots from each `ios-screenshots/<size>/` folder. (Omit
+  `--device`, or pass `--device play`, for the 1080×1920 Play set.)
 - **Description, keywords, support URL**.
 - **Build**: under the version, click **+ Build** → select the TestFlight build from
   Step 7.
