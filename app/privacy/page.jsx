@@ -183,7 +183,11 @@ export default function PrivacyPolicy() {
             users. A child&rsquo;s date of birth is used only privately, on our
             server, as a tie-breaker when two scores are equal (younger first) — it
             is never shown. Tapping another entry shows only that same public
-            information (icon, handle, score, lands completed).
+            information (icon, handle, score, lands completed). A child aged 10 or
+            under may show their cartoon (Ghibli) avatar instead of an icon — never
+            a real photo. A parent can hide their child from the leaderboard at any
+            time; this control is protected by a 4-digit PIN (resettable by an
+            emailed code).
           </P>
 
           <H>Trying the app without an account</H>

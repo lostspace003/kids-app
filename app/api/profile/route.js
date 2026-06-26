@@ -139,6 +139,8 @@ export async function PATCH(req) {
     if (taken) return error("That handle is taken — please pick another.", 409);
     patch.handle = h;
   }
+  // Leaderboard visibility (lbOptOut) is NOT changed here — it is PIN-protected
+  // via /api/profile/leaderboard-pin.
   // Note: photoKey / avatarKey / email are intentionally never updated here.
   patch.updatedAt = new Date().toISOString();
   const profile = await db.upsertProfile(user.id, patch);

@@ -13,7 +13,15 @@ export function publicProfile(p) {
   // A real uploaded photo (avatarSource "photo") locks the photo. Otherwise the
   // child uses a default traveller avatar, and can still upload one later.
   const isPhoto = p.avatarSource === "photo" || !!p.photoKey;
-  const fallbackDefault = p.defaultAvatar || (p.gender === "girl" ? "/hana.webp" : "/huzaifa.webp");
+  // Gender-correct the default cartoon. Backfills existing girl profiles that
+  // were created before Hana existed (they stored a boy default avatar).
+  const BOY_DEFAULTS = ["/hamza.webp", "/huzaifa.webp"];
+  let fallbackDefault = p.defaultAvatar;
+  if (p.gender === "girl") {
+    if (!fallbackDefault || BOY_DEFAULTS.includes(fallbackDefault)) fallbackDefault = "/hana.webp";
+  } else if (!fallbackDefault) {
+    fallbackDefault = "/huzaifa.webp";
+  }
   return {
     childName: p.childName,
     dob: p.dob,
@@ -28,6 +36,8 @@ export function publicProfile(p) {
     defaultAvatar: isPhoto ? null : fallbackDefault,
     // Public, editable leaderboard handle (custom if set, else generated).
     handle: normalizeHandle(p.handle) || publicIdentity(p.userId, p.gender).handle,
+    lbOptOut: !!p.lbOptOut, // parent hid this child from the leaderboard
+    lbPinSet: !!p.lbPinHash, // a 4-digit PIN protects the leaderboard toggle
     createdAt: p.createdAt,
     updatedAt: p.updatedAt,
   };

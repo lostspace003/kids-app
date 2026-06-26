@@ -45,6 +45,8 @@ IF OBJECT_ID('dbo.analytics','U') IS NULL CREATE TABLE dbo.analytics (
 IF COL_LENGTH('dbo.profiles','avatarSource') IS NULL ALTER TABLE dbo.profiles ADD avatarSource NVARCHAR(20);
 IF COL_LENGTH('dbo.profiles','defaultAvatar') IS NULL ALTER TABLE dbo.profiles ADD defaultAvatar NVARCHAR(80);
 IF COL_LENGTH('dbo.profiles','handle') IS NULL ALTER TABLE dbo.profiles ADD handle NVARCHAR(24);
+IF COL_LENGTH('dbo.profiles','lbOptOut') IS NULL ALTER TABLE dbo.profiles ADD lbOptOut BIT;
+IF COL_LENGTH('dbo.profiles','lbPinHash') IS NULL ALTER TABLE dbo.profiles ADD lbPinHash NVARCHAR(512);
 IF OBJECT_ID('dbo.blocked_emails','U') IS NULL CREATE TABLE dbo.blocked_emails (
   email NVARCHAR(256) PRIMARY KEY, reason NVARCHAR(200), createdAt NVARCHAR(40));
 IF COL_LENGTH('dbo.users','flagged') IS NULL ALTER TABLE dbo.users ADD flagged BIT NOT NULL DEFAULT 0;
@@ -105,10 +107,12 @@ export const dbAzure = {
       .input("ca", p.createdAt ?? null).input("ua", p.updatedAt ?? null).input("ra", p.avatarReadyAt ?? null)
       .input("asrc", p.avatarSource ?? null).input("dav", p.defaultAvatar ?? null)
       .input("hd", p.handle ?? null)
+      .input("lo", p.lbOptOut == null ? null : (p.lbOptOut ? 1 : 0))
+      .input("lph", p.lbPinHash ?? null)
       .query(`MERGE dbo.profiles AS t USING (SELECT @u AS userId) AS s ON t.userId=s.userId
-        WHEN MATCHED THEN UPDATE SET childName=@cn,dob=@dob,country=@co,gender=@g,photoKey=@pk,avatarKey=@ak,avatarStatus=@as,createdAt=@ca,updatedAt=@ua,avatarReadyAt=@ra,avatarSource=@asrc,defaultAvatar=@dav,handle=@hd
-        WHEN NOT MATCHED THEN INSERT (userId,childName,dob,country,gender,photoKey,avatarKey,avatarStatus,createdAt,updatedAt,avatarReadyAt,avatarSource,defaultAvatar,handle)
-        VALUES (@u,@cn,@dob,@co,@g,@pk,@ak,@as,@ca,@ua,@ra,@asrc,@dav,@hd);`);
+        WHEN MATCHED THEN UPDATE SET childName=@cn,dob=@dob,country=@co,gender=@g,photoKey=@pk,avatarKey=@ak,avatarStatus=@as,createdAt=@ca,updatedAt=@ua,avatarReadyAt=@ra,avatarSource=@asrc,defaultAvatar=@dav,handle=@hd,lbOptOut=@lo,lbPinHash=@lph
+        WHEN NOT MATCHED THEN INSERT (userId,childName,dob,country,gender,photoKey,avatarKey,avatarStatus,createdAt,updatedAt,avatarReadyAt,avatarSource,defaultAvatar,handle,lbOptOut,lbPinHash)
+        VALUES (@u,@cn,@dob,@co,@g,@pk,@ak,@as,@ca,@ua,@ra,@asrc,@dav,@hd,@lo,@lph);`);
     return p;
   },
 
@@ -156,7 +160,7 @@ export const dbAzure = {
   // ---- leaderboard feed (all profiles + all progress) ----
   async getAllProfiles() {
     const pool = await getPool();
-    const r = await pool.request().query("SELECT userId, gender, dob, handle, avatarSource, avatarKey FROM dbo.profiles");
+    const r = await pool.request().query("SELECT userId, gender, dob, handle, avatarSource, avatarKey, lbOptOut FROM dbo.profiles");
     return r.recordset;
   },
   async getAllProgress() {

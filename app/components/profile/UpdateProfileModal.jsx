@@ -15,7 +15,55 @@ export default function UpdateProfileModal({ profile, email, onClose, onSaved })
   const [country, setCountry] = useState(profile?.country || "");
   const [gender, setGender] = useState(profile?.gender || "boy");
   const [handle, setHandle] = useState(profile?.handle || "");
+  // Leaderboard visibility is PIN-protected (separate from the main Save).
+  const [showOnLeaderboard, setShowOnLeaderboard] = useState(!profile?.lbOptOut);
+  const [lbPinSet, setLbPinSet] = useState(!!profile?.lbPinSet);
+  const [lbFlow, setLbFlow] = useState(null); // null | "confirm" | "reset"
+  const [lbPin, setLbPin] = useState("");
+  const [lbNewPin, setLbNewPin] = useState("");
+  const [lbOtp, setLbOtp] = useState("");
+  const [lbResetSent, setLbResetSent] = useState(false);
+  const [lbBusy, setLbBusy] = useState(false);
+  const [lbErr, setLbErr] = useState("");
+  const [lbMsg, setLbMsg] = useState("");
   const [suggestions, setSuggestions] = useState([]);
+
+  // The pending target visibility (opposite of current) while confirming.
+  const pendingOptOut = showOnLeaderboard; // turning OFF if currently shown, and vice-versa
+
+  async function postLb(payload) {
+    const r = await fetch("/api/profile/leaderboard-pin", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || "Could not update.");
+    return d;
+  }
+  function resetLbUi() { setLbFlow(null); setLbPin(""); setLbNewPin(""); setLbOtp(""); setLbResetSent(false); setLbErr(""); setLbMsg(""); }
+  async function applyLbChange() {
+    setLbBusy(true); setLbErr("");
+    try {
+      const payload = { action: "apply", lbOptOut: !showOnLeaderboard };
+      if (lbPinSet) payload.pin = lbPin; else payload.newPin = lbNewPin;
+      const d = await postLb(payload);
+      setShowOnLeaderboard(!d.profile.lbOptOut);
+      setLbPinSet(!!d.profile.lbPinSet);
+      resetLbUi(); setLbMsg("Saved.");
+    } catch (e) { setLbErr(e.message); } finally { setLbBusy(false); }
+  }
+  async function sendLbReset() {
+    setLbBusy(true); setLbErr("");
+    try { await postLb({ action: "reset-start" }); setLbResetSent(true); setLbMsg("Code sent to your email."); }
+    catch (e) { setLbErr(e.message); } finally { setLbBusy(false); }
+  }
+  async function verifyLbReset() {
+    setLbBusy(true); setLbErr("");
+    try {
+      const d = await postLb({ action: "reset-verify", otp: lbOtp, newPin: lbNewPin, lbOptOut: !showOnLeaderboard });
+      setShowOnLeaderboard(!d.profile.lbOptOut);
+      setLbPinSet(true); resetLbUi(); setLbMsg("PIN reset & saved.");
+    } catch (e) { setLbErr(e.message); } finally { setLbBusy(false); }
+  }
   // handleStatus: "" | "checking" | "ok" | "taken" | "invalid"
   const [handleStatus, setHandleStatus] = useState("");
   const [busy, setBusy] = useState(false);
@@ -211,6 +259,87 @@ export default function UpdateProfileModal({ profile, email, onClose, onSaved })
             </div>
           </Field>
 
+          <Field label="Leaderboard">
+            <div style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
+              borderRadius: 12, padding: "11px 14px", border: `1px solid ${showOnLeaderboard ? C.gold : C.line}`,
+              background: showOnLeaderboard ? "rgba(245,196,81,.10)" : "rgba(0,0,0,.2)", color: C.ink,
+              fontFamily: "Fredoka, sans-serif", fontSize: 14.5,
+            }}>
+              <span>🏆 Show on leaderboard {lbPinSet && <span style={{ fontSize: 12, color: C.dim }}>🔒</span>}</span>
+              <span style={{ fontSize: 13, color: showOnLeaderboard ? C.gold : C.dim }}>{showOnLeaderboard ? "On" : "Off"}</span>
+            </div>
+            <div style={{ color: C.dim, fontSize: 12, margin: "5px 0 8px" }}>
+              Only a pseudonymous handle &amp; score appear — never the real name or photo.
+              {lbPinSet ? " Changing this needs your 4-digit PIN." : " A 4-digit PIN will protect this setting."}
+            </div>
+
+            {lbMsg && <div style={{ color: "#7fe0c0", fontSize: 12.5, marginBottom: 6 }}>{lbMsg}</div>}
+            {lbErr && <div style={{ color: "#e08a8a", fontSize: 12.5, marginBottom: 6 }}>{lbErr}</div>}
+
+            {lbFlow == null && (
+              <button type="button" onClick={() => { resetLbUi(); setLbFlow("confirm"); }} style={ghostBtn}>
+                {showOnLeaderboard ? "Hide from leaderboard" : "Show on leaderboard"}
+              </button>
+            )}
+
+            {lbFlow === "confirm" && (
+              <div style={lbPanel}>
+                <div style={{ fontSize: 13, color: C.dim, marginBottom: 8 }}>
+                  {lbPinSet ? "Enter your 4-digit PIN to " : "Create a 4-digit PIN to "}
+                  {showOnLeaderboard ? "hide" : "show"} your child.
+                </div>
+                <input
+                  style={{ ...inputStyle, letterSpacing: 8, textAlign: "center" }}
+                  inputMode="numeric" maxLength={4} placeholder="••••"
+                  value={lbPinSet ? lbPin : lbNewPin}
+                  onChange={(e) => { const v = e.target.value.replace(/\D/g, ""); lbPinSet ? setLbPin(v) : setLbNewPin(v); }}
+                />
+                <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                  <button type="button" onClick={resetLbUi} style={{ ...ghostBtn, flex: 1 }}>Cancel</button>
+                  <div style={{ flex: 1 }}>
+                    <Primary onClick={applyLbChange} disabled={lbBusy || (lbPinSet ? lbPin.length !== 4 : lbNewPin.length !== 4)}>
+                      {lbBusy ? "Saving…" : "Confirm"}
+                    </Primary>
+                  </div>
+                </div>
+                {lbPinSet && (
+                  <button type="button" onClick={() => { resetLbUi(); setLbFlow("reset"); }} style={{ ...linkBtn, marginTop: 10 }}>
+                    Forgot PIN?
+                  </button>
+                )}
+              </div>
+            )}
+
+            {lbFlow === "reset" && (
+              <div style={lbPanel}>
+                {!lbResetSent ? (
+                  <>
+                    <div style={{ fontSize: 13, color: C.dim, marginBottom: 8 }}>We'll email a 6-digit code to {email}.</div>
+                    <Primary onClick={sendLbReset} disabled={lbBusy}>{lbBusy ? "Sending…" : "Send reset code"}</Primary>
+                  </>
+                ) : (
+                  <>
+                    <input style={{ ...inputStyle, letterSpacing: 6, textAlign: "center", marginBottom: 8 }}
+                      inputMode="numeric" maxLength={6} placeholder="6-digit code"
+                      value={lbOtp} onChange={(e) => setLbOtp(e.target.value.replace(/\D/g, ""))} />
+                    <input style={{ ...inputStyle, letterSpacing: 8, textAlign: "center" }}
+                      inputMode="numeric" maxLength={4} placeholder="new 4-digit PIN"
+                      value={lbNewPin} onChange={(e) => setLbNewPin(e.target.value.replace(/\D/g, ""))} />
+                    <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                      <button type="button" onClick={resetLbUi} style={{ ...ghostBtn, flex: 1 }}>Cancel</button>
+                      <div style={{ flex: 1 }}>
+                        <Primary onClick={verifyLbReset} disabled={lbBusy || lbOtp.length !== 6 || lbNewPin.length !== 4}>
+                          {lbBusy ? "Saving…" : "Reset & save"}
+                        </Primary>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </Field>
+
           {/* Photo: locked once a real one exists; otherwise optional upload. */}
           <Field label="Photo">
             {photoLocked ? (
@@ -281,4 +410,12 @@ const uploadBtn = {
   width: "100%", padding: "12px", borderRadius: 12, cursor: "pointer",
   border: `1px dashed ${C.line}`, background: "rgba(0,0,0,.2)", color: C.ink,
   fontFamily: "Fredoka, sans-serif", fontSize: 15,
+};
+const lbPanel = {
+  marginTop: 4, padding: 12, borderRadius: 12,
+  border: `1px solid ${C.line}`, background: "rgba(0,0,0,.22)",
+};
+const linkBtn = {
+  background: "none", border: "none", color: C.gold, cursor: "pointer",
+  fontFamily: "Nunito, sans-serif", fontSize: 13, padding: 0,
 };

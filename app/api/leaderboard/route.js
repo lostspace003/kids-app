@@ -21,6 +21,8 @@ export async function GET() {
   const progMap = Object.fromEntries(progressList.map((p) => [p.userId, p.data || {}]));
 
   const rows = profiles
+    // Respect parents who hid their child from the leaderboard.
+    .filter((p) => !p.lbOptOut)
     .map((p) => {
       const prog = progMap[p.userId] || {};
       return {
