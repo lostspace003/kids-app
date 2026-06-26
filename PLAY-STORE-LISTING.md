@@ -91,38 +91,49 @@ is live.)*
 
 ---
 
-## Data safety form — what to declare
-The app DOES collect personal data, so answer "Yes" and declare:
+## Data safety form — exact answers to enter
 
-| Data type | Collected | Purpose | Shared | Notes |
-|-----------|-----------|---------|--------|-------|
-| Email address | Yes | Account management | No | Parent's email; verification + certificate emails |
-| Name | Yes | App functionality / personalisation | **Yes** | Child's first name; **shown on the public leaderboard** |
-| Date of birth | Yes | App functionality | **Yes (age)** | Age shown on the leaderboard; full DOB never shown/shared |
-| Other info (country, gender) | Yes | App functionality | No | Profile setup |
-| Photos | Yes | App functionality | No | Optional; used to generate the avatar |
-| App activity (progress) | Yes | App functionality | No | Prophets completed, badges, Noor |
-| App info & performance / Device IDs | Only if applicable | — | — | Standard logs only; no analytics/ads SDKs |
+Enter these in **Play Console → App content → Data safety**. The form has an
+overview, then a per-data-type questionnaire, then a review.
 
-**Leaderboard note (name + age are publicly visible):** the leaderboard shows each
-child&rsquo;s **first name and age**, plus their score, streak, and lands completed,
-to other users. It does **not** show a photo, surname, full DOB, or country. The
-full DOB is used only to compute age and as a hidden server-side tie-breaker. A
-child aged ≤10 may show their **cartoon (Ghibli) avatar** instead of an icon — never
-the real uploaded photo. A parent can **hide their child** from the leaderboard at
-any time, protected by a **4-digit PIN** (stored only as a salted hash; resettable
-via an emailed code). Because first name + age are visible to other users, in the
-Data safety form mark **Name** and **Date of birth (age)** as **"Shared"** (purpose:
-app functionality), or disable the leaderboard before launch if you prefer not to
-declare sharing. Guest "preview a story" mode creates no account and stores no
-personal data.
+### A. Overview questions
+1. **Does your app collect or share any of the required user data types?** → **Yes**
+2. **Is all of the user data collected by your app encrypted in transit?** → **Yes**
+   (everything is served over HTTPS).
+3. **Do you provide a way for users to request that their data be deleted?** → **Yes**
+   - **In-app:** Menu (☰) → **Delete account** removes the account and all data.
+   - **Off-app request URL:** `https://safar-anbiya.gennoor.com/privacy`
+     (documents deletion by emailing `admin@gennoor.com`).
 
-Also declare:
-- **Data is encrypted in transit:** Yes (HTTPS).
-- **Users can request deletion:** Yes (email admin@gennoor.com).
-- **No data shared with third parties for advertising.** Service providers
-  (Azure, Azure Communication Services, OpenAI/Azure OpenAI) are processors, not
-  "sharing" in the Data safety sense — they process on our behalf.
+> Note on **"Shared"**: the leaderboard is **public** (visible to other users and to
+> anyone, since `/api/leaderboard` needs no login). Google counts displaying data to
+> other users as **sharing**, so the three fields shown on the board — first **Name**,
+> **age** (Other info), and **app activity** (score/streak/lands) — are marked Shared.
+> The cloud providers (Azure, Azure Communication Services, OpenAI/Azure OpenAI) are
+> **processors**, not "sharing". If you would rather declare **no** sharing, disable
+> the leaderboard before launch.
+
+### B. Per-data-type answers
+For every "Collected = Yes" row: **Processed ephemerally = No**. "Required" means
+collected from every user; "Optional" means user-initiated.
+
+| Play data type | Collected | Shared | Required/Optional | Purposes | What it is |
+|---|---|---|---|---|---|
+| **Personal info → Name** | Yes | **Yes** | Required | App functionality, Personalization | Child's **first name** (shown on the public leaderboard) |
+| **Personal info → Email address** | Yes | No | Required | App functionality, Account management | Parent's email; OTP + certificate emails |
+| **Personal info → Other info** | Yes | **Yes** | Required | App functionality, Personalization | Date of birth, gender, country. **Age** (derived from DOB) is shown on the leaderboard → marks this type Shared; full DOB / gender / country are never shown |
+| **Photos and videos → Photos** | Yes | No | **Optional** | App functionality | Optional upload, used only to generate the cartoon avatar |
+| **App activity → App interactions** | Yes | **Yes** | Required | App functionality | Progress: prophets completed, badges, Noor, streak — score/streak/lands appear on the leaderboard |
+
+**Mark "Not collected" for everything else**, including: Location, Financial info,
+Health, Messages, Contacts, Calendar, Web browsing history, Device or other IDs,
+and App info & performance (Crash logs / Diagnostics). The app runs **no analytics
+or ads SDK**; transient server request logs (IP, device/browser) are used only for
+operation/security and are exempt.
+
+**Leaderboard / guest / PIN add no new data types.** A parent can hide their child
+from the board at any time (PIN-protected, salted-hash; resettable by emailed code).
+Guest "preview a story" mode creates no account and stores no personal data.
 
 ### Ads
 - **Contains ads: No.** Ads (Google AdSense) are shown **only on the public
@@ -156,9 +167,10 @@ payment, and signing keys, so they can't be automated:
       Bubblewrap). Keep the signing key safe; enable Play App Signing.
 - [ ] **Main store listing** — paste the title, short & full description, and
       upload `playstore-screenshots/` (icon, feature graphic, 2–8 phone shots).
-- [ ] **Data safety form** — fill from the table above (declare email, name, DOB,
-      country, photo, app activity; encrypted in transit; deletion on request; no
-      ads/sharing for advertising). The leaderboard/guest/PIN add no new data.
+- [ ] **Data safety form** — enter the answers from *"Data safety form — exact
+      answers to enter"* above: Yes/encrypted-in-transit/deletion-Yes, then the
+      5-row data-type table (Name + Other-info/age + App-activity marked **Shared**
+      for the public leaderboard; photo Optional). Everything else "Not collected".
 - [ ] **App content** — privacy policy URL, **content rating** questionnaire, and
       join **Designed for Families** (target age groups include children).
 - [ ] **App access (demo account)** — login is required, so provide a reviewer
