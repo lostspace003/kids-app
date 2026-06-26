@@ -62,9 +62,11 @@ Questions or feedback? Email admin@gennoor.com.
 ## Graphics (already prepared — `playstore-screenshots/`)
 - **App icon (512×512):** `app-icon-512.png`
 - **Feature graphic (1024×500):** `feature-graphic-1024x500.png`
-- **Phone screenshots (1080×1920):** `final/1-launch.png` … `final/9-certificate.png`
-  (Play allows 2–8 phone screenshots — suggested 8: journey-map, story, quran-ayah,
-  decision, quiz, reward-badge, certificate, and one of launch/languages.)
+- **Phone screenshots (1080×1920):** `final/1-launch.png` … `final/11-guest.png`
+  (11 available: launch, journey-map, story, quran-ayah, decision, quiz,
+  reward-badge, languages, certificate, **leaderboard**, **guest preview**.
+  Play allows 2–8 — suggested 8: journey-map, story, quran-ayah, decision, quiz,
+  reward-badge, leaderboard, and one of launch/guest.)
 
 > **Regenerating screenshots.** The phone screenshots are produced automatically
 > at exactly 1080×1920 by `scripts/capture-screenshots.mjs` (drives the running
@@ -104,9 +106,13 @@ The app DOES collect personal data, so answer "Yes" and declare:
 **Leaderboard note (no extra data shared):** the leaderboard is **pseudonymous** —
 it shows only a generated handle + fun icon + score. No child name, photo, age,
 DOB, or country is shown to other users. DOB is used only server-side as a hidden
-tie-breaker. Guest "preview a story" mode creates no account and stores no
-personal data. So this feature does **not** change the data types collected above
-and is **not** "sharing" personal data in the Data-safety sense.
+tie-breaker. A child aged ≤10 may show their **cartoon (Ghibli) avatar** instead
+of an icon — never the real uploaded photo. A parent can **hide their child** from
+the leaderboard at any time, protected by a **4-digit PIN** (stored only as a
+salted hash; resettable via an emailed code). Guest "preview a story" mode creates
+no account and stores no personal data. So this feature does **not** change the
+data types collected above and is **not** "sharing" personal data in the
+Data-safety sense.
 
 Also declare:
 - **Data is encrypted in transit:** Yes (HTTPS).
