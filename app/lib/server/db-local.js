@@ -86,6 +86,21 @@ export const dbLocal = {
       return d.profiles[userId];
     }),
 
+  // ---- account deletion (right-to-erasure) ----
+  // Removes the user, profile, progress, and their feedback/analytics rows in
+  // one atomic write. Media blobs and OTPs are cleaned up by the route. The
+  // content-safety blocklist is intentionally preserved (it is keyed by email).
+  deleteAccount: (userId) =>
+    tx((d) => {
+      const email = d.users[userId]?.email || null;
+      delete d.users[userId];
+      delete d.profiles[userId];
+      delete d.progress[userId];
+      d.feedback = (d.feedback || []).filter((f) => f.userId !== userId);
+      d.analytics = (d.analytics || []).filter((a) => a.userId !== userId);
+      return { email };
+    }),
+
   // ---- otps ----
   saveOtp: (email, rec) =>
     tx((d) => {

@@ -7,7 +7,7 @@ import { C } from "./ui";
 // change password, contact, and login/logout (contextual on auth state).
 export default function HamburgerMenu({
   authed, childName, avatarUrl,
-  onUpdate, onFeedback, onChangePassword, onContact, onLogin, onLogout, onLeaderboard,
+  onUpdate, onFeedback, onChangePassword, onContact, onLogin, onLogout, onLeaderboard, onDeleteAccount,
 }) {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
@@ -22,6 +22,8 @@ export default function HamburgerMenu({
   }
   items.push(["✉️", "Contact", act(onContact)]);
   items.push(authed ? ["🚪", "Log out", act(onLogout)] : ["➡️", "Log in", act(onLogin)]);
+  // Account deletion lives at the very bottom, visually separated and tinted red.
+  if (authed) items.push(["🗑️", "Delete account", act(onDeleteAccount), true]);
 
   return (
     <>
@@ -45,8 +47,8 @@ export default function HamburgerMenu({
               <button onClick={close} aria-label="Close" style={closeBtn}>✕</button>
             </div>
 
-            {items.map(([icon, label, on], i) => (
-              <button key={i} onClick={on} style={row}>
+            {items.map(([icon, label, on, danger], i) => (
+              <button key={i} onClick={on} style={danger ? { ...row, ...dangerRow } : row}>
                 <span style={{ fontSize: 19, width: 26 }}>{icon}</span>
                 <span style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: 15.5 }}>{label}</span>
               </button>
@@ -80,6 +82,10 @@ const row = {
   padding: "13px 12px", marginBottom: 6, borderRadius: 12, cursor: "pointer",
   border: `1px solid ${C.line}`, background: "rgba(255,255,255,.03)", color: C.ink,
   textAlign: "left",
+};
+const dangerRow = {
+  marginTop: 6, border: "1px solid rgba(255,90,90,.4)",
+  background: "rgba(255,70,70,.1)", color: "#ffb3b3",
 };
 const closeBtn = {
   marginLeft: "auto", width: 32, height: 32, borderRadius: "50%",

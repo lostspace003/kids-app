@@ -30,4 +30,8 @@ export const storageLocal = {
       return false;
     }
   },
+  async delete(key) {
+    if (!key) return;
+    await fs.rm(resolveKey(key), { force: true });
+  },
 };

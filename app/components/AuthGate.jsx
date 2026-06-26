@@ -12,6 +12,7 @@ import HamburgerMenu from "./HamburgerMenu";
 import FeedbackModal from "./FeedbackModal";
 import ContactModal from "./ContactModal";
 import ChangePasswordModal from "./ChangePasswordModal";
+import DeleteAccountModal from "./DeleteAccountModal";
 import UpdateProfileModal from "./profile/UpdateProfileModal";
 import { C } from "./ui";
 
@@ -25,7 +26,7 @@ export default function AuthGate() {
   const [profile, setProfile] = useState(null);
   const [pendingEnter, setPendingEnter] = useState(false); // "enter app" tapped before session loaded
 
-  // Journey chrome overlays: "none" | "update" | "feedback" | "contact" | "changepw"
+  // Journey chrome overlays: "none" | "update" | "feedback" | "contact" | "changepw" | "delete"
   const [overlay, setOverlay] = useState("none");
   const [stageFeedback, setStageFeedback] = useState(null); // { stage } when a stage just ended
   // Bumped to remount the journey after a profile edit so name/gender/avatar refresh.
@@ -77,6 +78,15 @@ export default function AuthGate() {
     setMe({ user: null, profile: null });
     setOverlay("none");
     setStage("auth");
+  }
+
+  // After the server has erased the account, drop all client state and return
+  // to the very first screen (the session cookie is already destroyed).
+  function onAccountDeleted() {
+    setProfile(null);
+    setMe({ user: null, profile: null });
+    setOverlay("none");
+    setStage("splash");
   }
 
   // Fired by the journey when a prophet's stage ends → ask for feedback.
@@ -146,6 +156,7 @@ export default function AuthGate() {
         onChangePassword={() => setOverlay("changepw")}
         onContact={() => setOverlay("contact")}
         onLeaderboard={() => setLbSignal((n) => n + 1)}
+        onDeleteAccount={() => setOverlay("delete")}
         onLogout={logout}
         onLogin={() => setStage("auth")}
       />
@@ -172,6 +183,13 @@ export default function AuthGate() {
       {overlay === "contact" && <ContactModal onClose={() => setOverlay("none")} />}
       {overlay === "changepw" && (
         <ChangePasswordModal onClose={() => setOverlay("none")} onDone={() => setOverlay("none")} />
+      )}
+      {overlay === "delete" && (
+        <DeleteAccountModal
+          childName={profile?.childName}
+          onClose={() => setOverlay("none")}
+          onDeleted={onAccountDeleted}
+        />
       )}
 
       {/* End-of-stage feedback */}

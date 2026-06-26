@@ -116,6 +116,26 @@ export const dbAzure = {
     return p;
   },
 
+  // ---- account deletion (right-to-erasure) ----
+  // Wipes every row tied to this user across all tables in a single batch. The
+  // route handles media blobs and the OTP row. The content-safety blocklist is
+  // intentionally preserved (keyed by email, must outlive the account).
+  async deleteAccount(userId) {
+    const cur = await this.getUserById(userId);
+    const email = cur?.email || null;
+    const pool = await getPool();
+    await pool.request().input("u", userId)
+      .batch(`
+        DELETE FROM dbo.feedback WHERE userId=@u;
+        DELETE FROM dbo.analytics WHERE userId=@u;
+        DELETE FROM dbo.progress WHERE userId=@u;
+        DELETE FROM dbo.certificates WHERE userId=@u;
+        DELETE FROM dbo.profiles WHERE userId=@u;
+        DELETE FROM dbo.users WHERE id=@u;
+      `);
+    return { email };
+  },
+
   // ---- otps ----
   async saveOtp(email, rec) {
     const pool = await getPool();

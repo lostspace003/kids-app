@@ -33,4 +33,9 @@ export const storageAzure = {
     const c = await getContainer();
     return c.getBlockBlobClient(key).exists();
   },
+  async delete(key) {
+    if (!key) return;
+    const c = await getContainer();
+    await c.getBlockBlobClient(key).deleteIfExists();
+  },
 };
