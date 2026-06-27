@@ -1,0 +1,63 @@
+[
+  {
+    "id": 1000,
+    "description": "Safar-e-Anbiya guest preview — get the Robo crawler past the splash/intro/auth screens into a free story so it can explore the app.",
+    "contextDescriptor": {
+      "condition": "app_under_test_shown"
+    },
+    "actions": [
+      {
+        "eventType": "WAIT_FOR_ELEMENT",
+        "description": "Wait for the splash screen WebView to render.",
+        "delayTime": 20000,
+        "elementDescriptors": [
+          { "textRegex": ".*[Ll]et.s begin.*" }
+        ],
+        "optional": true
+      },
+      {
+        "eventType": "VIEW_CLICKED",
+        "description": "Splash: tap 'Let's begin'.",
+        "elementDescriptors": [
+          { "textRegex": ".*[Ll]et.s begin.*" }
+        ],
+        "visionText": "Let's begin",
+        "optional": true
+      },
+      {
+        "eventType": "WAIT",
+        "delayTime": 1500
+      },
+      {
+        "eventType": "VIEW_CLICKED",
+        "description": "Intro/About: tap 'Log in to begin' (routes guests to the auth screen).",
+        "elementDescriptors": [
+          { "textRegex": ".*[Ll]og in to begin.*" }
+        ],
+        "visionText": "Log in to begin",
+        "optional": true
+      },
+      {
+        "eventType": "WAIT",
+        "delayTime": 1500
+      },
+      {
+        "eventType": "VIEW_CLICKED",
+        "description": "Auth screen: tap 'Just see a story first' to enter the free guest story (no credentials needed).",
+        "elementDescriptors": [
+          { "textRegex": ".*see a story first.*" }
+        ],
+        "visionText": "Just see a story first",
+        "optional": true
+      },
+      {
+        "eventType": "WAIT",
+        "delayTime": 3000
+      },
+      {
+        "eventType": "TAKE_SCREENSHOT",
+        "screenshotName": "guest_story_entered"
+      }
+    ]
+  }
+]

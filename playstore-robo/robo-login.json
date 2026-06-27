@@ -1,0 +1,91 @@
+[
+  {
+    "id": 2000,
+    "description": "Safar-e-Anbiya authenticated login — log the Robo crawler into a real parent account so it explores the full (signed-in) app. NOTE: text entry into WebView inputs is best-effort in Robo; if it fails, use robo-guest.json instead. Replace the email/password below with a throwaway TEST account.",
+    "contextDescriptor": {
+      "condition": "app_under_test_shown"
+    },
+    "actions": [
+      {
+        "eventType": "WAIT_FOR_ELEMENT",
+        "description": "Wait for the splash WebView to render.",
+        "delayTime": 20000,
+        "elementDescriptors": [
+          { "textRegex": ".*[Ll]et.s begin.*" }
+        ],
+        "optional": true
+      },
+      {
+        "eventType": "VIEW_CLICKED",
+        "description": "Splash: tap 'Let's begin'.",
+        "elementDescriptors": [
+          { "textRegex": ".*[Ll]et.s begin.*" }
+        ],
+        "visionText": "Let's begin",
+        "optional": true
+      },
+      {
+        "eventType": "WAIT",
+        "delayTime": 1500
+      },
+      {
+        "eventType": "VIEW_CLICKED",
+        "description": "Intro/About: tap 'Log in to begin' to reach the auth screen.",
+        "elementDescriptors": [
+          { "textRegex": ".*[Ll]og in to begin.*" }
+        ],
+        "visionText": "Log in to begin",
+        "optional": true
+      },
+      {
+        "eventType": "WAIT",
+        "delayTime": 1500
+      },
+      {
+        "eventType": "VIEW_TEXT_CHANGED",
+        "description": "Type the parent email. Matches the web <input type=email> (placeholder you@example.com).",
+        "replacementText": "REPLACE_WITH_TEST_EMAIL@example.com",
+        "elementDescriptors": [
+          { "className": "android.widget.EditText", "contentDescriptionRegex": ".*[Ee]mail.*" },
+          { "className": "android.widget.EditText", "textRegex": ".*you@example.*" }
+        ],
+        "optional": true
+      },
+      {
+        "eventType": "VIEW_TEXT_CHANGED",
+        "description": "Type the password. Matches the web <input type=password>.",
+        "replacementText": "REPLACE_WITH_TEST_PASSWORD",
+        "elementDescriptors": [
+          { "className": "android.widget.EditText", "contentDescriptionRegex": ".*[Pp]assword.*" }
+        ],
+        "optional": true
+      },
+      {
+        "eventType": "DISABLE_KEYBOARD"
+      },
+      {
+        "eventType": "VIEW_CLICKED",
+        "description": "Submit: tap the 'Log in' button.",
+        "elementDescriptors": [
+          { "text": "Log in" },
+          { "textRegex": "^Log in$" }
+        ],
+        "visionText": "Log in",
+        "optional": true
+      },
+      {
+        "eventType": "WAIT_FOR_ELEMENT",
+        "description": "Wait for the signed-in journey/map to load.",
+        "delayTime": 15000,
+        "elementDescriptors": [
+          { "textRegex": ".*[Nn]oor.*" }
+        ],
+        "optional": true
+      },
+      {
+        "eventType": "TAKE_SCREENSHOT",
+        "screenshotName": "logged_in"
+      }
+    ]
+  }
+]

@@ -28,21 +28,29 @@ const LANG = argVal("--lang", "en");
 const BASE = argVal("--base", "http://localhost:3000");
 const CHROME = process.env.CHROME_PATH || "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
 
-// Output target. Each preset's CSS size × deviceScaleFactor 3 produces the exact
-// pixel dimensions each store requires (we always render at scale factor 3):
-//   play   360×640 → 1080×1920  (Google Play phone)
-//   ios67  430×932 → 1290×2796  (Apple 6.7" iPhone — required size)
-//   ios65  414×896 → 1242×2688  (Apple 6.5" iPhone — required size)
-// Choose with --device play|ios67|ios65 (default play).
+// Output target. Each preset's CSS size × its deviceScaleFactor (dsf) produces
+// the exact pixel dimensions each store requires:
+//   play   360×640  ×3 → 1080×1920  (Google Play phone)
+//   tab7   600×960  ×2 → 1200×1920  (Google Play 7-inch tablet)
+//   tab10  800×1280 ×2 → 1600×2560  (Google Play 10-inch tablet)
+//   cros   720×1280 ×2 → 1440×2560  (Google Play Chromebook — 9:16 portrait)
+//   ios67  430×932  ×3 → 1290×2796  (Apple 6.7" iPhone — required size)
+//   ios65  414×896  ×3 → 1242×2688  (Apple 6.5" iPhone — required size)
+// Choose with --device play|tab7|tab10|cros|ios67|ios65 (default play).
+// (Android XR shots are built from these portrait images by build-xr-screenshots.mjs.)
 const DEVICES = {
-  play:  { dir: "playstore-screenshots", w: 360, h: 640 },
-  ios67: { dir: "ios-screenshots/6.7",   w: 430, h: 932 },
-  ios65: { dir: "ios-screenshots/6.5",   w: 414, h: 896 },
+  play:  { dir: "playstore-screenshots",            w: 360, h: 640,  dsf: 3 },
+  tab7:  { dir: "playstore-screenshots/tablet-7",   w: 600, h: 960,  dsf: 2 },
+  tab10: { dir: "playstore-screenshots/tablet-10",  w: 800, h: 1280, dsf: 2 },
+  cros:  { dir: "playstore-screenshots/chromebook", w: 720, h: 1280, dsf: 2 },
+  ios67: { dir: "ios-screenshots/6.7",              w: 430, h: 932,  dsf: 3 },
+  ios65: { dir: "ios-screenshots/6.5",              w: 414, h: 896,  dsf: 3 },
 };
 const DEVICE = DEVICES[argVal("--device", "play")] || DEVICES.play;
+const DSF = DEVICE.dsf || 3;
 const OUT = path.join(ROOT, DEVICE.dir);
 const FINAL = path.join(OUT, "final");
-const VIEWPORT = { width: DEVICE.w, height: DEVICE.h, deviceScaleFactor: 3, isMobile: true, hasTouch: true };
+const VIEWPORT = { width: DEVICE.w, height: DEVICE.h, deviceScaleFactor: DSF, isMobile: true, hasTouch: true };
 
 fs.mkdirSync(OUT, { recursive: true });
 fs.mkdirSync(FINAL, { recursive: true });
@@ -54,7 +62,7 @@ async function main() {
     executablePath: CHROME,
     headless: "new",
     defaultViewport: VIEWPORT,
-    args: ["--no-sandbox", "--hide-scrollbars", "--force-device-scale-factor=3"],
+    args: ["--no-sandbox", "--hide-scrollbars", `--force-device-scale-factor=${DSF}`],
   });
   const page = await browser.newPage();
   await page.setViewport(VIEWPORT);
@@ -207,7 +215,7 @@ async function main() {
   }
 
   await browser.close();
-  process.stdout.write(`\nDone. ${shots.length} screenshots (${VIEWPORT.width * 3}×${VIEWPORT.height * 3}) written to ${DEVICE.dir}/.\n`);
+  process.stdout.write(`\nDone. ${shots.length} screenshots (${VIEWPORT.width * DSF}×${VIEWPORT.height * DSF}) written to ${DEVICE.dir}/.\n`);
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });
