@@ -16,6 +16,7 @@ import {
   enName,
 } from "../lib/narration";
 import { STREAK_WEIGHT } from "../lib/leaderboard";
+import { vibrate } from "../lib/haptics";
 
 const E = React.createElement;
 
@@ -432,6 +433,15 @@ export default class ProphetsJourney extends React.Component {
     o.start(ac.currentTime + t0); o.stop(ac.currentTime + t0 + dur + 0.02);
   }
   sfx(kind) {
+    // Gentle haptic tick on every screen transition / choice. Fires even when
+    // sound is muted (vibration is a separate channel) and no-ops on devices
+    // without the Vibration API (e.g. iOS).
+    vibrate(
+      kind === "reward" ? [18, 50, 18, 50, 30]
+      : kind === "good" ? [12, 30, 12]
+      : kind === "soft" ? 8
+      : 12
+    );
     if (this.state.muted) return;
     const ac = this.audioCtx(); if (!ac) return; if (ac.state === "suspended") ac.resume();
     if (kind === "good") { this.tone(660, 0, 0.18, "sine", 0.1); this.tone(880, 0.09, 0.22, "sine", 0.1); }

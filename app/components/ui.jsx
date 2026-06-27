@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { vibrate } from "../lib/haptics";
 
 // Shared palette + primitives so the auth / profile / welcome screens all
 // match the journey's warm dark-and-gold aesthetic.
@@ -167,7 +168,7 @@ export function Primary({ children, disabled, onClick, type = "button" }) {
   return (
     <button
       type={type}
-      onClick={onClick}
+      onClick={(e) => { vibrate(12); onClick?.(e); }}
       disabled={disabled}
       className="ipj-primary"
       style={{
