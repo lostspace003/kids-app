@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Card, Field, Primary, ErrorNote, inputStyle, C } from "./ui";
+import { Card, Field, Primary, ErrorNote, PasswordInput, C } from "./ui";
 
 export default function ChangePasswordModal({ onClose, onDone }) {
   const [current, setCurrent] = useState("");
@@ -47,13 +47,13 @@ export default function ChangePasswordModal({ onClose, onDone }) {
             <>
               <ErrorNote>{err}</ErrorNote>
               <Field label="Current password">
-                <input style={inputStyle} type="password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} />
+                <PasswordInput autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} />
               </Field>
               <Field label="New password" hint="At least 8 characters.">
-                <input style={inputStyle} type="password" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} />
+                <PasswordInput autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} />
               </Field>
               <Field label="Confirm new password">
-                <input style={inputStyle} type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+                <PasswordInput autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
               </Field>
               <Primary onClick={save} disabled={busy || !current || !next}>{busy ? "Saving…" : "Update password"}</Primary>
               <button onClick={onClose} style={cancel}>Cancel</button>

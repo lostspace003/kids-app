@@ -123,6 +123,46 @@ export const inputStyle = {
   outline: "none",
 };
 
+// Password field with a show/hide eye toggle. Drop-in replacement for a bare
+// <input type="password" …>; forwards any extra props (value, onChange, etc.).
+export function PasswordInput({
+  value,
+  onChange,
+  autoComplete = "current-password",
+  placeholder = "••••••••",
+  ...rest
+}) {
+  const [show, setShow] = React.useState(false);
+  return (
+    <div style={{ position: "relative" }}>
+      <input
+        {...rest}
+        type={show ? "text" : "password"}
+        autoComplete={autoComplete}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        style={{ ...inputStyle, paddingRight: 46 }}
+      />
+      <button
+        type="button"
+        onClick={() => setShow((s) => !s)}
+        aria-label={show ? "Hide password" : "Show password"}
+        aria-pressed={show}
+        title={show ? "Hide password" : "Show password"}
+        style={{
+          position: "absolute", top: 0, right: 0, height: "100%", width: 44,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          background: "none", border: "none", cursor: "pointer",
+          color: C.dim, fontSize: 17, padding: 0,
+        }}
+      >
+        {show ? "🙈" : "👁️"}
+      </button>
+    </div>
+  );
+}
+
 export function Primary({ children, disabled, onClick, type = "button" }) {
   return (
     <button

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import {
-  Screen, Card, Title, Field, Primary, LinkBtn, ErrorNote, inputStyle, C,
+  Screen, Card, Title, Field, Primary, LinkBtn, ErrorNote, PasswordInput, inputStyle, C,
 } from "../ui";
 
 async function postJson(url, body) {
@@ -21,13 +21,14 @@ export default function AuthFlow({ onAuthed, onGuest }) {
   const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [notice, setNotice] = useState("");
 
   function switchMode(next) {
-    setErr(""); setNotice(""); setCode(""); setMode(next);
+    setErr(""); setNotice(""); setCode(""); setConfirm(""); setMode(next);
   }
 
   async function doLogin(e) {
@@ -39,7 +40,9 @@ export default function AuthFlow({ onAuthed, onGuest }) {
   }
 
   async function doSignupStart(e) {
-    e.preventDefault(); setErr(""); setBusy(true);
+    e.preventDefault(); setErr("");
+    if (password !== confirm) return setErr("Passwords don't match.");
+    setBusy(true);
     const { res, data } = await postJson("/api/auth/signup/start", { email, password });
     setBusy(false);
     if (!res.ok) return setErr(data.error || "Could not start sign up.");
@@ -74,7 +77,9 @@ export default function AuthFlow({ onAuthed, onGuest }) {
   }
 
   async function doResetVerify(e) {
-    e.preventDefault(); setErr(""); setBusy(true);
+    e.preventDefault(); setErr("");
+    if (password !== confirm) return setErr("Passwords don't match.");
+    setBusy(true);
     const { res, data } = await postJson("/api/auth/reset/verify", {
       email, code, newPassword: password,
     });
@@ -183,16 +188,20 @@ export default function AuthFlow({ onAuthed, onGuest }) {
               />
             </Field>
             <Field label="New password" hint="At least 8 characters.">
-              <input
-                style={inputStyle}
-                type="password"
+              <PasswordInput
                 autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
               />
             </Field>
-            <Primary type="submit" disabled={busy || code.length !== 6 || password.length < 8}>
+            <Field label="Confirm new password">
+              <PasswordInput
+                autoComplete="new-password"
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+              />
+            </Field>
+            <Primary type="submit" disabled={busy || code.length !== 6 || password.length < 8 || confirm.length < 8}>
               {busy ? "Saving…" : "Reset & continue"}
             </Primary>
           </form>
@@ -228,16 +237,22 @@ export default function AuthFlow({ onAuthed, onGuest }) {
             />
           </Field>
           <Field label="Password" hint={isSignup ? "At least 8 characters." : undefined}>
-            <input
-              style={inputStyle}
-              type="password"
+            <PasswordInput
               autoComplete={isSignup ? "new-password" : "current-password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
             />
           </Field>
-          <Primary type="submit" disabled={busy || !email || password.length < (isSignup ? 8 : 1)}>
+          {isSignup && (
+            <Field label="Confirm password">
+              <PasswordInput
+                autoComplete="new-password"
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+              />
+            </Field>
+          )}
+          <Primary type="submit" disabled={busy || !email || password.length < (isSignup ? 8 : 1) || (isSignup && confirm.length < 8)}>
             {busy ? "Please wait…" : isSignup ? "Send code" : "Log in"}
           </Primary>
         </form>
