@@ -158,8 +158,9 @@ export default function PrivacyPolicy() {
               uploaded images appropriate via automated moderation.
             </LI>
             <LI>
-              To email essential messages, such as the verification code and, when a
-              child finishes all 25 prophets, a Certificate of Completion.
+              To email essential messages, such as the verification code, a
+              password-reset code when you ask to reset a forgotten password, and,
+              when a child finishes all 25 prophets, a Certificate of Completion.
             </LI>
             <LI>To respond to feedback and support requests, and to keep the service safe.</LI>
           </ul>
