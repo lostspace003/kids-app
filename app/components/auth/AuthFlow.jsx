@@ -63,6 +63,34 @@ export default function AuthFlow({ onAuthed, onGuest }) {
     setNotice(`A new code was sent to ${email}.`);
   }
 
+  async function doResetStart(e) {
+    e.preventDefault(); setErr(""); setBusy(true);
+    const { res, data } = await postJson("/api/auth/reset/start", { email });
+    setBusy(false);
+    if (!res.ok) return setErr(data.error || "Could not send a reset code.");
+    setPassword("");
+    setNotice(`If an account exists for ${email}, we've emailed a 6-digit reset code.`);
+    setMode("reset-otp");
+  }
+
+  async function doResetVerify(e) {
+    e.preventDefault(); setErr(""); setBusy(true);
+    const { res, data } = await postJson("/api/auth/reset/verify", {
+      email, code, newPassword: password,
+    });
+    setBusy(false);
+    if (!res.ok) return setErr(data.error || "Could not reset your password.");
+    onAuthed({ hasProfile: data.hasProfile });
+  }
+
+  async function resendReset() {
+    setErr(""); setBusy(true);
+    const { res, data } = await postJson("/api/auth/reset/start", { email });
+    setBusy(false);
+    if (!res.ok) return setErr(data.error || "Could not resend.");
+    setNotice(`If an account exists for ${email}, a new reset code is on its way.`);
+  }
+
   // ---- OTP entry screen ----
   if (mode === "otp") {
     return (
@@ -93,6 +121,85 @@ export default function AuthFlow({ onAuthed, onGuest }) {
             <LinkBtn onClick={resend}>Resend code</LinkBtn>
             <span style={{ color: C.dim, margin: "0 6px" }}>·</span>
             <LinkBtn onClick={() => switchMode("signup")}>Change email</LinkBtn>
+          </div>
+        </Card>
+      </Screen>
+    );
+  }
+
+  // ---- Forgot password: request a reset code ----
+  if (mode === "reset") {
+    return (
+      <Screen narrow>
+        <Card>
+          <Title sub="We'll email you a code to set a new password">
+            Reset password
+          </Title>
+          {notice && <div style={noticeStyle}>{notice}</div>}
+          <ErrorNote>{err}</ErrorNote>
+          <form onSubmit={doResetStart}>
+            <Field label="Parent's email" hint="Enter the email you signed up with.">
+              <input
+                style={inputStyle}
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+              />
+            </Field>
+            <Primary type="submit" disabled={busy || !email}>
+              {busy ? "Sending…" : "Send reset code"}
+            </Primary>
+          </form>
+          <div style={{ textAlign: "center", marginTop: 14 }}>
+            <LinkBtn onClick={() => switchMode("login")}>Back to log in</LinkBtn>
+          </div>
+        </Card>
+      </Screen>
+    );
+  }
+
+  // ---- Forgot password: enter code + new password ----
+  if (mode === "reset-otp") {
+    return (
+      <Screen narrow>
+        <Card>
+          <Title sub="Enter the code we emailed you and a new password">
+            Choose a new password
+          </Title>
+          {notice && <div style={noticeStyle}>{notice}</div>}
+          <ErrorNote>{err}</ErrorNote>
+          <form onSubmit={doResetVerify}>
+            <Field label="6-digit code">
+              <input
+                style={{ ...inputStyle, letterSpacing: 8, textAlign: "center", fontSize: 22 }}
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                placeholder="······"
+              />
+            </Field>
+            <Field label="New password" hint="At least 8 characters.">
+              <input
+                style={inputStyle}
+                type="password"
+                autoComplete="new-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+              />
+            </Field>
+            <Primary type="submit" disabled={busy || code.length !== 6 || password.length < 8}>
+              {busy ? "Saving…" : "Reset & continue"}
+            </Primary>
+          </form>
+          <div style={{ textAlign: "center", marginTop: 14 }}>
+            <LinkBtn onClick={resendReset}>Resend code</LinkBtn>
+            <span style={{ color: C.dim, margin: "0 6px" }}>·</span>
+            <LinkBtn onClick={() => switchMode("reset")}>Change email</LinkBtn>
           </div>
         </Card>
       </Screen>
@@ -134,6 +241,11 @@ export default function AuthFlow({ onAuthed, onGuest }) {
             {busy ? "Please wait…" : isSignup ? "Send code" : "Log in"}
           </Primary>
         </form>
+        {!isSignup && (
+          <div style={{ textAlign: "center", marginTop: 12 }}>
+            <LinkBtn onClick={() => switchMode("reset")}>Forgot password?</LinkBtn>
+          </div>
+        )}
         <div style={{ textAlign: "center", marginTop: 16, color: C.dim, fontSize: 14 }}>
           {isSignup ? "Already have an account?" : "New here?"}{" "}
           <LinkBtn onClick={() => switchMode(isSignup ? "login" : "signup")}>
